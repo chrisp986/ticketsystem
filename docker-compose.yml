@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: ticketsystem-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ticketsystem
+      POSTGRES_USER: ticketsystem
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - ticketsystem_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticketsystem -d ticketsystem"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ticketsystem_postgres_data:

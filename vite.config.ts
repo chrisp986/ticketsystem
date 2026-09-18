@@ -16,5 +16,9 @@ export default defineConfig({
 			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 			adapter: adapter()
 		})
-	]
+	],
+	server: {
+    	host: '0.0.0.0',
+    	port: 5173
+  }
 });
