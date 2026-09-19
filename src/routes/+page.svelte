@@ -1,13 +1,4 @@
 <script lang="ts">
-	import { exampleTickets } from '$lib/modules/tickets/example';
-	import type { Ticket, TicketStatus } from '$lib/modules/tickets/types';
-
-	let tickets = $state<Ticket[]>(exampleTickets.map((ticket) => ({ ...ticket })));
-
-	function changeStatus(ticket: Ticket, status: TicketStatus) {
-		ticket.status = status;
-		ticket.updatedAt = new Date();
-	}
 </script>
 
 <h1>Tickets</h1>
