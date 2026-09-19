@@ -1,23 +1,47 @@
 <script lang="ts">
-    import { exampleTickets } from '$lib/modules/tickets/example';
+	import { exampleTickets } from '$lib/modules/tickets/example';
+	import type { Ticket, TicketStatus } from '$lib/modules/tickets/types';
+
+	let tickets = $state<Ticket[]>(exampleTickets.map((ticket) => ({ ...ticket })));
+
+	function changeStatus(ticket: Ticket, status: TicketStatus) {
+		ticket.status = status;
+		ticket.updatedAt = new Date();
+	}
 </script>
 
 <h1>Tickets</h1>
 
-<p>{exampleTickets.length} Tickets vorhanden</p>
+<p>{tickets.length} Tickets vorhanden</p>
 
-{#each exampleTickets as ticket (ticket.id)}
-    <article>
-        <h2>{ticket.subject}</h2>
+{#each tickets as ticket (ticket.id)}
+	<article>
+		<h2>{ticket.subject}</h2>
 
-        <p>
-            {ticket.id} . Status: {ticket.status} . Priorität: {ticket.priority}
-        </p>
+		<p>
+			{ticket.id} . Status: {ticket.status} . Priorität: {ticket.priority}
+		</p>
 
-        {#if ticket.description}
-            <p>{ticket.description}</p>
-        {/if}
+		{#if ticket.description}
+			<p>{ticket.description}</p>
+		{/if}
 
-        <p>Bearbeiter: {ticket.assignee}</p>
-    </article>
+		<p>Bearbeiter: {ticket.assignee}</p>
+
+		<button
+			type="button"
+			onclick={() => changeStatus(ticket, 'in_progress')}
+			disabled={ticket.status === 'in_progress'}
+		>
+			Bearbeitung starten
+		</button>
+
+		<button
+			type="button"
+			onclick={() => changeStatus(ticket, 'closed')}
+			disabled={ticket.status === 'closed'}
+		>
+			Abschließen
+		</button>
+	</article>
 {/each}
