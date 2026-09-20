@@ -1,21 +1,11 @@
-import { sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
+import { tickets } from '$lib/server/db/schema/tickets';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
-	try {
-		await db.execute(sql`SELECT 1`);
+export const load = (async () => {
+	const ticketRows = await db.select().from(tickets);
 
-		console.log('DB connection successful.');
-	} catch (error) {
-		console.error('DB connection error:', error);
-
-		if (error instanceof Error && error.cause) {
-			console.error('Ursache:', error.cause);
-		}
-
-		throw error;
-	}
-
-	return {};
-};
+	return {
+		tickets: ticketRows
+	};
+}) satisfies PageServerLoad;
