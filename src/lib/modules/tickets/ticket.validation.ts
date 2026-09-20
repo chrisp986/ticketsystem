@@ -18,31 +18,31 @@ export const ticketSourceSchema = z.enum(ticketSources);
  * This represents the application-facing
  * ticket model after database retrieval.
  */
-export const ticketSchema = z.object({
-	id: z.uuid(),
+// export const ticketSchema = z.object({
+// 	id: z.uuid(),
 
-	subject: z.string().trim(),
+// 	subject: z.string().trim(),
 
-	description: z.string().nullable(),
+// 	description: z.string().nullable(),
 
-	status: ticketStatusSchema,
+// 	status: ticketStatusSchema,
 
-	priority: ticketPrioritySchema,
+// 	priority: ticketPrioritySchema,
 
-	source: ticketSourceSchema,
+// 	source: ticketSourceSchema,
 
-	tags: z.array(z.string()),
+// 	tags: z.array(z.string()),
 
-	version: z.number().int().positive(),
+// 	version: z.number().int().positive(),
 
-	resolvedAt: z.date().nullable(),
+// 	resolvedAt: z.date().nullable(),
 
-	closedAt: z.date().nullable(),
+// 	closedAt: z.date().nullable(),
 
-	createdAt: z.date(),
+// 	createdAt: z.date(),
 
-	updatedAt: z.date()
-});
+// 	updatedAt: z.date()
+// });
 
 /**
  * Input for creating a new ticket.

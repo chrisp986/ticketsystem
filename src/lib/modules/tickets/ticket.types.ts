@@ -4,7 +4,7 @@ import { ticketPriorities, ticketSources, ticketStatuses } from './ticket.consta
 
 import type {
 	createTicketSchema,
-	ticketSchema,
+	// ticketSchema,
 	updateTicketStatusSchema
 } from './ticket.validation';
 
@@ -25,8 +25,8 @@ export type TicketSource = (typeof ticketSources)[number];
  *
  * Derived from the runtime validation schema.
  *
-*export type Ticket = z.infer<typeof ticketSchema>;
-*/
+ *export type Ticket = z.infer<typeof ticketSchema>;
+ */
 /**
  * Input for creating a ticket.
  *
