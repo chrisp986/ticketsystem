@@ -1,47 +1,23 @@
 <script lang="ts">
-	import { exampleTickets } from '$lib/modules/tickets/example';
-	import type { Ticket, TicketStatus } from '$lib/modules/tickets/types';
+	import type { PageProps } from './$types';
 
-	let tickets = $state<Ticket[]>(exampleTickets.map((ticket) => ({ ...ticket })));
-
-	function changeStatus(ticket: Ticket, status: TicketStatus) {
-		ticket.status = status;
-		ticket.updatedAt = new Date();
-	}
+	let { data }: PageProps = $props();
 </script>
 
 <h1>Tickets</h1>
 
-<p>{tickets.length} Tickets vorhanden</p>
+<p>{data.tickets.length} tickets</p>
 
-{#each tickets as ticket (ticket.id)}
+{#each data.tickets as ticket (ticket.id)}
 	<article>
-		<h2>{ticket.subject}</h2>
+		<h2>{ticket.subject || '(No subject)'}</h2>
 
-		<p>
-			{ticket.id} . Status: {ticket.status} . Priorität: {ticket.priority}
-		</p>
+		<p>Status: {ticket.status} · Priority: {ticket.priority}</p>
 
 		{#if ticket.description}
 			<p>{ticket.description}</p>
 		{/if}
-
-		<p>Bearbeiter: {ticket.assignee}</p>
-
-		<button
-			type="button"
-			onclick={() => changeStatus(ticket, 'in_progress')}
-			disabled={ticket.status === 'in_progress'}
-		>
-			Bearbeitung starten
-		</button>
-
-		<button
-			type="button"
-			onclick={() => changeStatus(ticket, 'closed')}
-			disabled={ticket.status === 'closed'}
-		>
-			Abschließen
-		</button>
 	</article>
+{:else}
+	<p>No tickets yet.</p>
 {/each}
