@@ -51,7 +51,7 @@ export const ticketSourceSchema = z.enum(ticketSources);
  * The service controls lifecycle state and version.
  */
 export const createTicketSchema = z.object({
-	subject: z.string().trim().min(1, 'Subject is required').max(200, 'Subject is too long'),
+	subject: z.string().trim(),
 
 	description: z.string().trim().nullable().optional(),
 
