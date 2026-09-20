@@ -21,7 +21,7 @@ export const ticketSourceSchema = z.enum(ticketSources);
 export const ticketSchema = z.object({
 	id: z.uuid(),
 
-	subject: z.string().trim().min(1).max(200),
+	subject: z.string().trim(),
 
 	description: z.string().nullable(),
 
