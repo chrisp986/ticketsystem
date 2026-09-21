@@ -11,7 +11,9 @@
 
 {#each data.tickets as ticket (ticket.id)}
 	<article>
-		<h2>{ticket.subject || '(No subject)'}</h2>
+		<h2>
+			<a href="/tickets/{ticket.id}">{ticket.subject || '(No subject)'}</a>
+		</h2>
 
 		<p>Status: {ticket.status} · Priority: {ticket.priority}</p>
 
