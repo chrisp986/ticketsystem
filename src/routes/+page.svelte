@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import { resolve } from '$app/paths';
 
 	let { data }: PageProps = $props();
 </script>
@@ -10,7 +11,9 @@
 
 {#each data.tickets as ticket (ticket.id)}
 	<article>
-		<h2>{ticket.subject || '(No subject)'}</h2>
+		<h2>
+			<a href="/tickets/{ticket.id}">{ticket.subject || '(No subject)'}</a>
+		</h2>
 
 		<p>Status: {ticket.status} · Priority: {ticket.priority}</p>
 
@@ -21,3 +24,6 @@
 {:else}
 	<p>No tickets yet.</p>
 {/each}
+<br />
+
+<a href={resolve('/tickets/new')}>Create ticket</a>

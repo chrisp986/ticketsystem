@@ -29,6 +29,8 @@ export const tickets = pgTable(
 	{
 		id: uuid('id').defaultRandom().primaryKey(),
 
+		ticketNumber: integer('ticket_number').generatedAlwaysAsIdentity().notNull().unique(),
+
 		subject: text('subject').notNull(),
 
 		description: text('description'),
