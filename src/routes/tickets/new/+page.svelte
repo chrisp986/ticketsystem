@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import { resolve } from '$app/paths';
 
 	let { form }: PageProps = $props();
 </script>
@@ -24,4 +25,4 @@
 	<button type="submit">Create ticket</button>
 </form>
 
-<a href="/">Back to tickets</a>
+<a href={resolve('/')}>Back to tickets</a>
