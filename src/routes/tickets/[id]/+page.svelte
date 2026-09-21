@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { ticketStatuses } from '$lib/modules/tickets/ticket.constants';
+	import { resolve } from '$app/paths';
 
 	let { data, form }: PageProps = $props();
 </script>
 
-<a href="/">Back to tickets</a>
+<a href={resolve('/')}>Back to tickets</a>
 
 <h1>{data.ticket.subject || '(No subject)'}</h1>
 

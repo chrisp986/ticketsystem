@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { tickets } from '$lib/server/db/schema/tickets';
 
 import { error, fail } from '@sveltejs/kit';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, ne } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { updateTicketStatusSchema } from '$lib/modules/tickets/ticket.validation';
 
@@ -57,10 +57,33 @@ export const actions = {
 						status === 'resolved' ? now : status === 'closed' ? sql`${tickets.resolvedAt}` : null,
 					closedAt: status === 'closed' ? now : null
 				})
-				.where(and(eq(tickets.id, ticketId), eq(tickets.version, expectedVersion)))
+				.where(
+					and(
+						eq(tickets.id, ticketId),
+						eq(tickets.version, expectedVersion),
+						ne(tickets.status, status)
+					)
+				)
 				.returning({ id: tickets.id });
 
 			if (!updatedTicket) {
+				const [currentTicket] = await db
+					.select({
+						status: tickets.status,
+						version: tickets.version
+					})
+					.from(tickets)
+					.where(eq(tickets.id, ticketId))
+					.limit(1);
+
+				if (
+					currentTicket &&
+					currentTicket.version === expectedVersion &&
+					currentTicket.status === status
+				) {
+					return { message: 'Status is already up to date.' };
+				}
+
 				return fail(409, {
 					message: 'The ticket changed or no longer exists. Reload before trying again.'
 				});
