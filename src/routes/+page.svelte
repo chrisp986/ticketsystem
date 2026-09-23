@@ -20,13 +20,17 @@
 			params.set('q', data.searchTerm);
 		}
 
-		return `/?${params.toString()}`;
+		return `${resolve('/')}?${params.toString()}`;
 	}
 </script>
 
 <h1>Tickets</h1>
 
 <p>{data.tickets.length} tickets on this page.</p>
+
+<h2>
+	<a href={resolve('/tickets/new')}>Create ticket</a>
+</h2>
 
 <form method="GET" action="/">
 	<label for="ticket-search">Subject</label>
@@ -51,13 +55,15 @@
 	</select>
 
 	<button type="submit">Search and filter</button>
-	<a href="/">Clear search and filters</a>
+	<a href={resolve('/')}>Clear search and filters</a>
 </form>
 
 {#each data.tickets as ticket (ticket.id)}
 	<article>
 		<h2>
-			<a href="/tickets/{ticket.id}">{ticket.subject || '(No subject)'}</a>
+			<a href={resolve('/tickets/[id]', { id: ticket.id })}>
+				{ticket.subject || '(No subject)'}
+			</a>
 		</h2>
 		<p>Created: {ticket.createdAt}</p>
 
@@ -93,7 +99,3 @@
 		<a href={pageUrl(data.page + 1)}>Next</a>
 	{/if}
 </nav>
-
-<h2>
-	<a href={resolve('/tickets/new')}>Create ticket</a>
-</h2>
