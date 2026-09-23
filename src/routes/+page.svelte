@@ -16,6 +16,10 @@
 			params.set('status', data.selectedStatus);
 		}
 
+		if (data.searchTerm) {
+			params.set('q', data.searchTerm);
+		}
+
 		return `/?${params.toString()}`;
 	}
 </script>
@@ -25,8 +29,17 @@
 <p>{data.tickets.length} tickets on this page.</p>
 
 <form method="GET" action="/">
-	<label for="status-filter">Status</label>
+	<label for="ticket-search">Subject</label>
+	<input
+		id="ticket-search"
+		type="search"
+		name="q"
+		value={data.searchTerm}
+		placeholder="Search ticket subjects"
+		maxlength="200"
+	/>
 
+	<label for="status-filter">Status</label>
 	<select id="status-filter" name="status">
 		<option value="" selected={data.selectedStatus === ''}> All statuses </option>
 
@@ -37,8 +50,8 @@
 		{/each}
 	</select>
 
-	<button type="submit">Apply filter</button>
-	<a href={resolve('/')}>Clear filter</a>
+	<button type="submit">Search and filter</button>
+	<a href="/">Clear search and filters</a>
 </form>
 
 {#each data.tickets as ticket (ticket.id)}
@@ -60,7 +73,9 @@
 		<a href={pageUrl(1)}>Go to the first page</a>
 	{:else}
 		<p>
-			{data.selectedStatus ? 'No tickets match this status.' : 'No tickets yet.'}
+			{data.selectedStatus || data.searchTerm
+				? 'No tickets match your search and filters.'
+				: 'No tickets yet.'}
 		</p>
 	{/if}
 {/each}

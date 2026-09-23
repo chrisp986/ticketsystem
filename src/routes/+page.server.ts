@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ilike } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { ticketStatusSchema } from '$lib/modules/tickets/ticket.validation';
@@ -8,6 +8,7 @@ import { tickets } from '$lib/server/db/schema/tickets';
 import type { PageServerLoad } from './$types';
 
 const PAGE_SIZE = 10;
+const searchSchema = z.string().trim().max(200);
 
 const pageSchema = z
 	.string()
@@ -32,6 +33,17 @@ export const load = (async ({ url }) => {
 		error(400, 'Invalid page number.');
 	}
 
+	const searchResult = searchSchema.safeParse(url.searchParams.get('q') ?? '');
+
+	if (!searchResult.success) {
+		error(400, 'Search must be 200 characters or fewer.');
+	}
+
+	const searchTerm = searchResult.data;
+
+	// Treat user-entered backslashes, percent signs, and underscores literally.
+	const escapedSearchTerm = searchTerm.replace(/[\\%_]/g, (character) => `\\${character}`);
+
 	const selectedStatus = statusResult.data;
 	const page = pageResult.data;
 	const offset = (page - 1) * PAGE_SIZE;
@@ -39,7 +51,12 @@ export const load = (async ({ url }) => {
 	const ticketRows = await db
 		.select()
 		.from(tickets)
-		.where(selectedStatus === undefined ? undefined : eq(tickets.status, selectedStatus))
+		.where(
+			and(
+				selectedStatus === undefined ? undefined : eq(tickets.status, selectedStatus),
+				searchTerm === '' ? undefined : ilike(tickets.subject, `%${escapedSearchTerm}%`)
+			)
+		)
 		.orderBy(desc(tickets.createdAt), desc(tickets.id))
 		.limit(PAGE_SIZE + 1)
 		.offset(offset);
@@ -47,6 +64,7 @@ export const load = (async ({ url }) => {
 	return {
 		tickets: ticketRows.slice(0, PAGE_SIZE),
 		selectedStatus: selectedStatus ?? '',
+		searchTerm,
 		page,
 		hasPreviousPage: page > 1,
 		hasNextPage: ticketRows.length > PAGE_SIZE
