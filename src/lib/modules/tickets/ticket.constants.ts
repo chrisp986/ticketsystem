@@ -21,6 +21,15 @@ export const ticketStatuses = [
 	'closed'
 ] as const;
 
+export const ticketStatusLabels = {
+	new: 'New',
+	in_progress: 'In progress',
+	waiting_customer: 'Waiting for customer',
+	waiting_internal: 'Waiting internally',
+	resolved: 'Resolved',
+	closed: 'Closed'
+} satisfies Record<(typeof ticketStatuses)[number], string>;
+
 /**
  * Ticket priorities.
  */

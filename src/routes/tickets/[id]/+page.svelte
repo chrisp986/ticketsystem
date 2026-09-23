@@ -1,16 +1,17 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { ticketStatuses } from '$lib/modules/tickets/ticket.constants';
+	import { ticketStatuses, ticketStatusLabels } from '$lib/modules/tickets/ticket.constants';
+	import { resolve } from '$app/paths';
 
 	let { data, form }: PageProps = $props();
 </script>
 
-<a href="/">Back to tickets</a>
+<a href={resolve('/')}>Back to tickets</a>
 
 <h1>{data.ticket.subject || '(No subject)'}</h1>
 
 <p>Ticket Nr.: {data.ticket.ticketNumber}</p>
-<p>Status: {data.ticket.status}</p>
+<p>Status: {ticketStatusLabels[data.ticket.status]}</p>
 
 <form method="POST" action="?/updateStatus">
 	<input type="hidden" name="expectedVersion" value={data.ticket.version} />
@@ -20,7 +21,7 @@
 	<select id="status" name="status">
 		{#each ticketStatuses as status (status)}
 			<option value={status} selected={status === data.ticket.status}>
-				{status}
+				{ticketStatusLabels[status]}
 			</option>
 		{/each}
 	</select>
