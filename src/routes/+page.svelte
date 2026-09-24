@@ -7,7 +7,7 @@
 
 	let { data }: PageProps = $props();
 
-	function pageUrl(page: number): string {
+	function pageUrl(page: number): `?${string}` {
 		const params = new SvelteURLSearchParams();
 
 		params.set('page', String(page));
@@ -20,7 +20,7 @@
 			params.set('q', data.searchTerm);
 		}
 
-		return `${resolve('/')}?${params.toString()}`;
+		return `?${params.toString()}`;
 	}
 </script>
 
@@ -76,7 +76,7 @@
 {:else}
 	{#if data.page > 1}
 		<p>No tickets on this page.</p>
-		<a href={pageUrl(1)}>Go to the first page</a>
+		<a href={resolve(`/${pageUrl(1)}`)}>Go to the first page</a>
 	{:else}
 		<p>
 			{data.selectedStatus || data.searchTerm
@@ -90,12 +90,12 @@
 
 <nav aria-label="Ticket pagination">
 	{#if data.hasPreviousPage}
-		<a href={pageUrl(data.page - 1)}>Previous</a>
+		<a href={resolve(`/${pageUrl(data.page - 1)}`)}>Previous</a>
 	{/if}
 
 	<span>Page {data.page}</span>
 
 	{#if data.hasNextPage}
-		<a href={pageUrl(data.page + 1)}>Next</a>
+		<a href={resolve(`/${pageUrl(data.page + 1)}`)}>Next</a>
 	{/if}
 </nav>
