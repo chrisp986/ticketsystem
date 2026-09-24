@@ -8,14 +8,25 @@ export const actions = {
 	default: async ({ request }) => {
 		const formData = await request.formData();
 
+		const subject = formData.get('subject');
+		const description = formData.get('description');
+
+		// Only return strings to the text fields.
+		const values = {
+			subject: typeof subject === 'string' ? subject : '',
+			description: typeof description === 'string' ? description : ''
+		};
+
+		// Validate the original submitted values.
 		const result = createTicketSchema.safeParse({
-			subject: formData.get('subject'),
-			description: formData.get('description')
+			subject,
+			description
 		});
 
 		if (!result.success) {
 			return fail(400, {
-				message: result.error.issues[0]?.message ?? 'Please check your input.'
+				message: result.error.issues[0]?.message ?? 'Please check your input.',
+				values
 			});
 		}
 
@@ -23,7 +34,8 @@ export const actions = {
 			await db.insert(tickets).values(result.data);
 		} catch {
 			return fail(500, {
-				message: 'The ticket could not be saved. Please try again.'
+				message: 'The ticket could not be saved. Please try again.',
+				values
 			});
 		}
 

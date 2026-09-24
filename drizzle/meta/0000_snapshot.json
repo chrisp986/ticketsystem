@@ -1,216 +1,197 @@
 {
-  "id": "ca6d6cf0-48f4-4e60-aedc-a33048ebb816",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "7",
-  "dialect": "postgresql",
-  "tables": {
-    "public.tickets": {
-      "name": "tickets",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "ticket_number": {
-          "name": "ticket_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "tickets_ticket_number_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "subject": {
-          "name": "subject",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "ticket_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'new'"
-        },
-        "priority": {
-          "name": "priority",
-          "type": "ticket_priority",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'medium'"
-        },
-        "source": {
-          "name": "source",
-          "type": "ticket_source",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'manual'"
-        },
-        "tags": {
-          "name": "tags",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::text[]"
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "resolved_at": {
-          "name": "resolved_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "closed_at": {
-          "name": "closed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "tickets_status_created_at_idx": {
-          "name": "tickets_status_created_at_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tickets_priority_status_idx": {
-          "name": "tickets_priority_status_idx",
-          "columns": [
-            {
-              "expression": "priority",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "tickets_ticket_number_unique": {
-          "name": "tickets_ticket_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "ticket_number"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    }
-  },
-  "enums": {
-    "public.ticket_priority": {
-      "name": "ticket_priority",
-      "schema": "public",
-      "values": [
-        "low",
-        "medium",
-        "high",
-        "critical"
-      ]
-    },
-    "public.ticket_source": {
-      "name": "ticket_source",
-      "schema": "public",
-      "values": [
-        "manual",
-        "email",
-        "web",
-        "api"
-      ]
-    },
-    "public.ticket_status": {
-      "name": "ticket_status",
-      "schema": "public",
-      "values": [
-        "new",
-        "in_progress",
-        "waiting_customer",
-        "waiting_internal",
-        "resolved",
-        "closed"
-      ]
-    }
-  },
-  "schemas": {},
-  "sequences": {},
-  "roles": {},
-  "policies": {},
-  "views": {},
-  "_meta": {
-    "columns": {},
-    "schemas": {},
-    "tables": {}
-  }
+	"id": "ca6d6cf0-48f4-4e60-aedc-a33048ebb816",
+	"prevId": "00000000-0000-0000-0000-000000000000",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"public.tickets": {
+			"name": "tickets",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"ticket_number": {
+					"name": "ticket_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"identity": {
+						"type": "always",
+						"name": "tickets_ticket_number_seq",
+						"schema": "public",
+						"increment": "1",
+						"startWith": "1",
+						"minValue": "1",
+						"maxValue": "2147483647",
+						"cache": "1",
+						"cycle": false
+					}
+				},
+				"subject": {
+					"name": "subject",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"status": {
+					"name": "status",
+					"type": "ticket_status",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'new'"
+				},
+				"priority": {
+					"name": "priority",
+					"type": "ticket_priority",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'medium'"
+				},
+				"source": {
+					"name": "source",
+					"type": "ticket_source",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'manual'"
+				},
+				"tags": {
+					"name": "tags",
+					"type": "text[]",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'{}'::text[]"
+				},
+				"version": {
+					"name": "version",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 1
+				},
+				"resolved_at": {
+					"name": "resolved_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"closed_at": {
+					"name": "closed_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"tickets_status_created_at_idx": {
+					"name": "tickets_status_created_at_idx",
+					"columns": [
+						{
+							"expression": "status",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "created_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"tickets_priority_status_idx": {
+					"name": "tickets_priority_status_idx",
+					"columns": [
+						{
+							"expression": "priority",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "status",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"tickets_ticket_number_unique": {
+					"name": "tickets_ticket_number_unique",
+					"nullsNotDistinct": false,
+					"columns": ["ticket_number"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		}
+	},
+	"enums": {
+		"public.ticket_priority": {
+			"name": "ticket_priority",
+			"schema": "public",
+			"values": ["low", "medium", "high", "critical"]
+		},
+		"public.ticket_source": {
+			"name": "ticket_source",
+			"schema": "public",
+			"values": ["manual", "email", "web", "api"]
+		},
+		"public.ticket_status": {
+			"name": "ticket_status",
+			"schema": "public",
+			"values": ["new", "in_progress", "waiting_customer", "waiting_internal", "resolved", "closed"]
+		}
+	},
+	"schemas": {},
+	"sequences": {},
+	"roles": {},
+	"policies": {},
+	"views": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
 }

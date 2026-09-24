@@ -7,7 +7,7 @@
 
 	let { data }: PageProps = $props();
 
-	function pageUrl(page: number): string {
+	function pageUrl(page: number): `?${string}` {
 		const params = new SvelteURLSearchParams();
 
 		params.set('page', String(page));
@@ -20,13 +20,17 @@
 			params.set('q', data.searchTerm);
 		}
 
-		return `/?${params.toString()}`;
+		return `?${params.toString()}`;
 	}
 </script>
 
 <h1>Tickets</h1>
 
 <p>{data.tickets.length} tickets on this page.</p>
+
+<h2>
+	<a href={resolve('/tickets/new')}>Create ticket</a>
+</h2>
 
 <form method="GET" action="/">
 	<label for="ticket-search">Subject</label>
@@ -51,13 +55,15 @@
 	</select>
 
 	<button type="submit">Search and filter</button>
-	<a href="/">Clear search and filters</a>
+	<a href={resolve('/')}>Clear search and filters</a>
 </form>
 
 {#each data.tickets as ticket (ticket.id)}
 	<article>
 		<h2>
-			<a href="/tickets/{ticket.id}">{ticket.subject || '(No subject)'}</a>
+			<a href={resolve('/tickets/[id]', { id: ticket.id })}>
+				{ticket.subject || '(No subject)'}
+			</a>
 		</h2>
 		<p>Created: {ticket.createdAt}</p>
 
@@ -70,7 +76,7 @@
 {:else}
 	{#if data.page > 1}
 		<p>No tickets on this page.</p>
-		<a href={pageUrl(1)}>Go to the first page</a>
+		<a href={resolve(`/${pageUrl(1)}`)}>Go to the first page</a>
 	{:else}
 		<p>
 			{data.selectedStatus || data.searchTerm
@@ -84,16 +90,12 @@
 
 <nav aria-label="Ticket pagination">
 	{#if data.hasPreviousPage}
-		<a href={pageUrl(data.page - 1)}>Previous</a>
+		<a href={resolve(`/${pageUrl(data.page - 1)}`)}>Previous</a>
 	{/if}
 
 	<span>Page {data.page}</span>
 
 	{#if data.hasNextPage}
-		<a href={pageUrl(data.page + 1)}>Next</a>
+		<a href={resolve(`/${pageUrl(data.page + 1)}`)}>Next</a>
 	{/if}
 </nav>
-
-<h2>
-	<a href={resolve('/tickets/new')}>Create ticket</a>
-</h2>
