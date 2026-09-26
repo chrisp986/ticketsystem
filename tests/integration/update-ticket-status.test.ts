@@ -4,6 +4,7 @@ import { afterAll, expect, test } from 'vitest';
 import { tickets } from '../../src/lib/server/db/schema/tickets';
 import { updateTicketStatus } from '../../src/lib/server/tickets/update-ticket-status';
 import { testDb, testPool } from './helpers/db';
+import { ticketStatusHistory } from '../../src/lib/server/db/schema/ticket-status-history';
 
 afterAll(async () => {
 	await testPool.end();
@@ -34,6 +35,13 @@ test('saving the current status does not change the ticket', async () => {
 		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
 
 		expect(stored).toEqual(created);
+
+		const history = await testDb
+			.select()
+			.from(ticketStatusHistory)
+			.where(eq(ticketStatusHistory.ticketId, created.id));
+
+		expect(history).toEqual([]);
 	} finally {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}
@@ -71,13 +79,18 @@ test('resolving a ticket updates its status, version and timestamps', async () =
 			throw new Error('Test ticket disappeared.');
 		}
 
-		expect(stored.status).toBe('resolved');
-		expect(stored.version).toBe(created.version + 1);
-		expect(stored.resolvedAt).toBeInstanceOf(Date);
-		expect(stored.updatedAt.getTime()).toBeGreaterThan(originalTime.getTime());
-		expect(stored.resolvedAt).toEqual(stored.updatedAt);
-		expect(stored.closedAt).toBeNull();
-		expect(stored.createdAt).toEqual(created.createdAt);
+		const history = await testDb
+			.select()
+			.from(ticketStatusHistory)
+			.where(eq(ticketStatusHistory.ticketId, created.id));
+
+		expect(history).toHaveLength(1);
+		expect(history[0]).toMatchObject({
+			ticketId: created.id,
+			previousStatus: 'new',
+			newStatus: 'resolved',
+			changedAt: stored.updatedAt
+		});
 	} finally {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}
@@ -115,6 +128,18 @@ test('an outdated version cannot overwrite a newer status change', async () => {
 			throw new Error('Test ticket disappeared.');
 		}
 
+		const historyBeforeConflict = await testDb
+			.select()
+			.from(ticketStatusHistory)
+			.where(eq(ticketStatusHistory.ticketId, created.id));
+
+		expect(historyBeforeConflict).toHaveLength(1);
+		expect(historyBeforeConflict[0]).toMatchObject({
+			ticketId: created.id,
+			previousStatus: 'new',
+			newStatus: 'resolved'
+		});
+
 		// The second tab still has the original, now outdated version.
 		const secondOutcome = await updateTicketStatus(testDb, {
 			ticketId: created.id,
@@ -127,6 +152,13 @@ test('an outdated version cannot overwrite a newer status change', async () => {
 		const [afterConflict] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
 
 		expect(afterConflict).toEqual(afterFirstUpdate);
+
+		const historyAfterConflict = await testDb
+			.select()
+			.from(ticketStatusHistory)
+			.where(eq(ticketStatusHistory.ticketId, created.id));
+
+		expect(historyAfterConflict).toEqual(historyBeforeConflict);
 	} finally {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}

@@ -1,9 +1,10 @@
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { z } from 'zod';
 
 import type { updateTicketStatusSchema } from '../../modules/tickets/ticket.validation';
 import { tickets } from '../db/schema/tickets';
+import { ticketStatusHistory } from '../db/schema/ticket-status-history';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 
@@ -14,47 +15,47 @@ export async function updateTicketStatus(
 	input: UpdateTicketStatusInput
 ): Promise<UpdateTicketStatusResult> {
 	const { ticketId, status, expectedVersion } = input;
-	const now = new Date();
 
-	const [updatedTicket] = await database
-		.update(tickets)
-		.set({
-			status,
-			version: sql`${tickets.version} + 1`,
-			updatedAt: now,
-			resolvedAt:
-				status === 'resolved' ? now : status === 'closed' ? sql`${tickets.resolvedAt}` : null,
-			closedAt: status === 'closed' ? now : null
-		})
-		.where(
-			and(
-				eq(tickets.id, ticketId),
-				eq(tickets.version, expectedVersion),
-				ne(tickets.status, status)
-			)
-		)
-		.returning({ id: tickets.id });
+	return database.transaction(async (tx): Promise<UpdateTicketStatusResult> => {
+		const [currentTicket] = await tx
+			.select({
+				status: tickets.status,
+				version: tickets.version
+			})
+			.from(tickets)
+			.where(eq(tickets.id, ticketId))
+			.limit(1)
+			.for('update');
 
-	if (updatedTicket) {
+		if (!currentTicket || currentTicket.version !== expectedVersion) {
+			return 'conflict';
+		}
+
+		if (currentTicket.status === status) {
+			return 'unchanged';
+		}
+
+		const now = new Date();
+
+		await tx
+			.update(tickets)
+			.set({
+				status,
+				version: sql`${tickets.version} + 1`,
+				updatedAt: now,
+				resolvedAt:
+					status === 'resolved' ? now : status === 'closed' ? sql`${tickets.resolvedAt}` : null,
+				closedAt: status === 'closed' ? now : null
+			})
+			.where(eq(tickets.id, ticketId));
+
+		await tx.insert(ticketStatusHistory).values({
+			ticketId,
+			previousStatus: currentTicket.status,
+			newStatus: status,
+			changedAt: now
+		});
+
 		return 'updated';
-	}
-
-	const [currentTicket] = await database
-		.select({
-			status: tickets.status,
-			version: tickets.version
-		})
-		.from(tickets)
-		.where(eq(tickets.id, ticketId))
-		.limit(1);
-
-	if (
-		currentTicket &&
-		currentTicket.version === expectedVersion &&
-		currentTicket.status === status
-	) {
-		return 'unchanged';
-	}
-
-	return 'conflict';
+	});
 }

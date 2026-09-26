@@ -4,7 +4,8 @@ import { db } from '$lib/server/db';
 import { tickets } from '$lib/server/db/schema/tickets';
 
 import { error, fail } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
+import { ticketStatusHistory } from '$lib/server/db/schema/ticket-status-history';
 import { updateTicketStatus } from '$lib/server/tickets/update-ticket-status';
 import type { Actions, PageServerLoad } from './$types';
 import { updateTicketStatusSchema } from '$lib/modules/tickets/ticket.validation';
@@ -24,7 +25,17 @@ export const load = (async ({ params }) => {
 		error(404, 'Ticket not found.');
 	}
 
-	return { ticket };
+	const statusHistory = await db
+		.select()
+		.from(ticketStatusHistory)
+		.where(eq(ticketStatusHistory.ticketId, ticket.id))
+		.orderBy(desc(ticketStatusHistory.changedAt), desc(ticketStatusHistory.id))
+		.limit(50);
+
+	return {
+		ticket,
+		statusHistory
+	};
 }) satisfies PageServerLoad;
 
 export const actions = {
