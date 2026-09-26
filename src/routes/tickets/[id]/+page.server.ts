@@ -4,7 +4,8 @@ import { db } from '$lib/server/db';
 import { tickets } from '$lib/server/db/schema/tickets';
 
 import { error, fail } from '@sveltejs/kit';
-import { and, eq, sql, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { updateTicketStatus } from '$lib/server/tickets/update-ticket-status';
 import type { Actions, PageServerLoad } from './$types';
 import { updateTicketStatusSchema } from '$lib/modules/tickets/ticket.validation';
 
@@ -43,57 +44,24 @@ export const actions = {
 			});
 		}
 
-		const { ticketId, status, expectedVersion } = result.data;
-		const now = new Date();
-
 		try {
-			const [updatedTicket] = await db
-				.update(tickets)
-				.set({
-					status,
-					version: sql`${tickets.version} + 1`,
-					updatedAt: now,
-					resolvedAt:
-						status === 'resolved' ? now : status === 'closed' ? sql`${tickets.resolvedAt}` : null,
-					closedAt: status === 'closed' ? now : null
-				})
-				.where(
-					and(
-						eq(tickets.id, ticketId),
-						eq(tickets.version, expectedVersion),
-						ne(tickets.status, status)
-					)
-				)
-				.returning({ id: tickets.id });
+			const outcome = await updateTicketStatus(db, result.data);
 
-			if (!updatedTicket) {
-				const [currentTicket] = await db
-					.select({
-						status: tickets.status,
-						version: tickets.version
-					})
-					.from(tickets)
-					.where(eq(tickets.id, ticketId))
-					.limit(1);
+			if (outcome === 'unchanged') {
+				return { message: 'Status is already up to date.' };
+			}
 
-				if (
-					currentTicket &&
-					currentTicket.version === expectedVersion &&
-					currentTicket.status === status
-				) {
-					return { message: 'Status is already up to date.' };
-				}
-
+			if (outcome === 'conflict') {
 				return fail(409, {
 					message: 'The ticket changed or no longer exists. Reload before trying again.'
 				});
 			}
+
+			return { message: 'Status updated.' };
 		} catch {
 			return fail(500, {
 				message: 'The status could not be saved. Please try again.'
 			});
 		}
-
-		return { message: 'Status updated.' };
 	}
 } satisfies Actions;
