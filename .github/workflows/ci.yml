@@ -19,6 +19,21 @@ jobs:
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ticketsystem_ci
 
+    services:
+      postgres-test:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: ticketsystem_test
+          POSTGRES_USER: ticketsystem_test
+          POSTGRES_PASSWORD: local_test_only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U ticketsystem_test -d ticketsystem_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -42,3 +57,9 @@ jobs:
 
       - name: Validate project
         run: pnpm validate
+
+      - name: Migrate test database
+        run: pnpm db:test:migrate
+
+      - name: Run integration tests
+        run: pnpm test:integration
