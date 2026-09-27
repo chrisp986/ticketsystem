@@ -1,3 +1,4 @@
+import { building } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
@@ -9,7 +10,8 @@ if (!connectionString) {
 }
 
 const pool = new Pool({
-	connectionString,
+	// Never actually connected to during the build's route-analysis step.
+	connectionString: building ? 'postgresql://build:build@localhost:5432/build' : connectionString,
 	max: 5,
 	connectionTimeoutMillis: 5000
 });
