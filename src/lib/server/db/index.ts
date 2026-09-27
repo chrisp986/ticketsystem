@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 
 const connectionString = env.DATABASE_URL;
 
-if (!connectionString) {
+if (!building && !connectionString) {
 	throw new Error('DATABASE_URL missing.');
 }
 
