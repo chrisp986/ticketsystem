@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { tickets } from '$lib/server/db/schema/tickets';
 import { createTicketSchema } from '$lib/modules/tickets/ticket.validation';
+import { createTicket } from '$lib/server/tickets/create-ticket';
 import type { Actions } from './$types';
 
 export const actions = {
@@ -31,7 +31,7 @@ export const actions = {
 		}
 
 		try {
-			await db.insert(tickets).values(result.data);
+			await createTicket(db, result.data);
 		} catch {
 			return fail(500, {
 				message: 'The ticket could not be saved. Please try again.',
