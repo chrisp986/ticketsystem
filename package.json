@@ -16,7 +16,7 @@
 		"test:watch": "vitest",
 		"db:test:migrate": "drizzle-kit migrate --config=drizzle.test.config.ts",
 		"test:integration": "vitest run --config=vitest.integration.config.ts",
-		"validate": "pnpm check && pnpm lint && pnpm test && pnpm build"
+		"validate": "pnpm check && pnpm lint && pnpm test && pnpm test:integration && pnpm build"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
