@@ -1,0 +1,3 @@
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_closed_at_matches_status" CHECK (("tickets"."status" = 'closed') = ("tickets"."closed_at" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_resolved_status_has_resolved_at" CHECK ("tickets"."status" <> 'resolved' OR "tickets"."resolved_at" IS NOT NULL);--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_resolved_at_only_when_resolved_or_closed" CHECK ("tickets"."status" IN ('resolved', 'closed') OR "tickets"."resolved_at" IS NULL);
