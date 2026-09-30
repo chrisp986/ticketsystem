@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 
-import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, pgEnum, pgTable, text, timestamp, uuid, check } from 'drizzle-orm/pg-core';
 
 import {
 	ticketPriorities,
@@ -77,7 +77,20 @@ export const tickets = pgTable(
 	(table) => [
 		index('tickets_status_created_at_idx').on(table.status, table.createdAt),
 
-		index('tickets_priority_status_idx').on(table.priority, table.status)
+		index('tickets_priority_status_idx').on(table.priority, table.status),
+
+		check(
+			'tickets_closed_at_matches_status',
+			sql`(${table.status} = 'closed') = (${table.closedAt} IS NOT NULL)`
+		),
+		check(
+			'tickets_resolved_status_has_resolved_at',
+			sql`${table.status} <> 'resolved' OR ${table.resolvedAt} IS NOT NULL`
+		),
+		check(
+			'tickets_resolved_at_only_when_resolved_or_closed',
+			sql`${table.status} IN ('resolved', 'closed') OR ${table.resolvedAt} IS NULL`
+		)
 	]
 );
 
