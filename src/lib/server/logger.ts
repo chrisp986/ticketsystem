@@ -1,3 +1,5 @@
+import { DrizzleQueryError } from 'drizzle-orm';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 type LogContext = Record<string, unknown>;
 
@@ -19,16 +21,28 @@ function getMinLevel(): LogLevel {
 	return isLogLevel(configured) ? configured : 'info';
 }
 
+// Drizzle puts the query parameters (user content) into message and stack.
+function safeMessageAndStack(error: Error): { message: string; stack?: string } {
+	if (!(error instanceof DrizzleQueryError)) {
+		return { message: error.message, stack: error.stack };
+	}
+
+	const message = `Failed query: ${error.query}`;
+	return { message, stack: error.stack?.replace(error.message, message) };
+}
+
 export function serializeError(error: unknown, depth = 0): unknown {
 	if (!(error instanceof Error)) {
 		return error;
 	}
 
+	const { message, stack } = safeMessageAndStack(error);
+
 	return {
-		...error,
+		...primitiveFields(error),
 		name: error.name,
-		message: error.message,
-		stack: error.stack,
+		message,
+		stack,
 		cause:
 			depth < MAX_CAUSE_DEPTH && error.cause !== undefined
 				? serializeError(error.cause, depth + 1)
@@ -76,3 +90,11 @@ export const logger = {
 	warn: (message: string, context?: LogContext) => write('warn', message, context),
 	error: (message: string, context?: LogContext) => write('error', message, context)
 };
+
+const primitiveTypes = new Set(['string', 'number', 'boolean']);
+
+function primitiveFields(error: Error): Record<string, unknown> {
+	return Object.fromEntries(
+		Object.entries(error).filter(([, value]) => value === null || primitiveTypes.has(typeof value))
+	);
+}
