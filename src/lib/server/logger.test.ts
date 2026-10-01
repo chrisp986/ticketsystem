@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { logger, serializeError } from './logger';
+import { DrizzleQueryError } from 'drizzle-orm';
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -49,4 +50,46 @@ test('skips messages below the configured level', () => {
 	logger.info('ignored');
 
 	expect(spy).not.toHaveBeenCalled();
+});
+
+test('drops non-primitive error properties such as attached clients', () => {
+	const circular: Record<string, unknown> = {};
+	circular.self = circular;
+	const error = Object.assign(new Error('idle client lost'), {
+		code: '57P01',
+		client: circular
+	});
+
+	const serialized = serializeError(error);
+
+	expect(serialized).toMatchObject({ code: '57P01', message: 'idle client lost' });
+	expect(serialized).not.toHaveProperty('client');
+});
+
+test('drops non-primitive error properties such as attached clients', () => {
+	const circular: Record<string, unknown> = {};
+	circular.self = circular;
+	const error = Object.assign(new Error('idle client lost'), {
+		code: '57P01',
+		client: circular
+	});
+
+	const serialized = serializeError(error);
+
+	expect(serialized).toMatchObject({ code: '57P01', message: 'idle client lost' });
+	expect(serialized).not.toHaveProperty('client');
+});
+
+test('removes query parameters from Drizzle query errors', () => {
+	const error = new DrizzleQueryError(
+		'insert into "tickets" ("subject") values ($1)',
+		['secret subject'],
+		new Error('connection refused')
+	);
+
+	const serialized = JSON.stringify(serializeError(error));
+
+	expect(serialized).not.toContain('secret subject');
+	expect(serialized).toContain('Failed query: insert into');
+	expect(serialized).toContain('connection refused');
 });
