@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { db } from '$lib/server/db';
 import { tickets } from '$lib/server/db/schema/tickets';
+import { logger } from '$lib/server/logger';
 
 import { error, fail } from '@sveltejs/kit';
 import { desc, eq } from 'drizzle-orm';
@@ -39,7 +40,7 @@ export const load = (async ({ params }) => {
 }) satisfies PageServerLoad;
 
 export const actions = {
-	updateStatus: async ({ request, params }) => {
+	updateStatus: async ({ request, params, locals }) => {
 		const formData = await request.formData();
 		const versionValue = formData.get('expectedVersion');
 
@@ -69,7 +70,13 @@ export const actions = {
 			}
 
 			return { message: 'Status updated.' };
-		} catch {
+		} catch (err) {
+			logger.error('failed to update ticket status', {
+				requestId: locals.requestId,
+				ticketId: params.id,
+				status: result.data.status,
+				err
+			});
 			return fail(500, {
 				message: 'The status could not be saved. Please try again.'
 			});
