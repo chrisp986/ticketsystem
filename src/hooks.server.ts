@@ -1,6 +1,11 @@
-import type { Handle, HandleServerError } from '@sveltejs/kit';
+import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit';
 
-import { logger } from '$lib/server/logger';
+import { logger, setLogLevel } from '$lib/server/logger';
+import { serverConfig } from '$lib/server/env';
+
+export const init: ServerInit = () => {
+	setLogLevel(serverConfig.LOG_LEVEL);
+};
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const requestId = crypto.randomUUID();
