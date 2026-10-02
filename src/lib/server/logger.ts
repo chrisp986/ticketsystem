@@ -1,6 +1,8 @@
 import { DrizzleQueryError } from 'drizzle-orm';
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export const logLevels = ['debug', 'info', 'warn', 'error'] as const;
+export type LogLevel = (typeof logLevels)[number];
+
 type LogContext = Record<string, unknown>;
 
 const levelOrder: Record<LogLevel, number> = {
@@ -12,13 +14,10 @@ const levelOrder: Record<LogLevel, number> = {
 
 const MAX_CAUSE_DEPTH = 5;
 
-function isLogLevel(value: string | undefined): value is LogLevel {
-	return value !== undefined && Object.hasOwn(levelOrder, value);
-}
+let minLevel: LogLevel = 'info';
 
-function getMinLevel(): LogLevel {
-	const configured = process.env.LOG_LEVEL;
-	return isLogLevel(configured) ? configured : 'info';
+export function setLogLevel(level: LogLevel): void {
+	minLevel = level;
 }
 
 // Drizzle puts the query parameters (user content) into message and stack.
@@ -51,7 +50,7 @@ export function serializeError(error: unknown, depth = 0): unknown {
 }
 
 function write(level: LogLevel, message: string, context: LogContext = {}): void {
-	if (levelOrder[level] < levelOrder[getMinLevel()]) {
+	if (levelOrder[level] < levelOrder[minLevel]) {
 		return;
 	}
 

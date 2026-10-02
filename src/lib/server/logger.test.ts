@@ -1,11 +1,12 @@
 import { afterEach, expect, test, vi } from 'vitest';
 
-import { logger, serializeError } from './logger';
+import { logger, serializeError, setLogLevel } from './logger';
 import { DrizzleQueryError } from 'drizzle-orm';
 
 afterEach(() => {
 	vi.restoreAllMocks();
 	vi.unstubAllEnvs();
+	setLogLevel('info');
 });
 
 test('serializes error message, stack and nested cause fields', () => {
@@ -44,7 +45,7 @@ test('context cannot overwrite the level field', () => {
 });
 
 test('skips messages below the configured level', () => {
-	vi.stubEnv('LOG_LEVEL', 'warn');
+	setLogLevel('warn');
 	const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 	logger.info('ignored');
