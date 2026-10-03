@@ -1,18 +1,11 @@
-import { building } from '$app/environment';
-import { env } from '$env/dynamic/private';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { logger } from '$lib/server/logger';
 
-const connectionString = env.DATABASE_URL;
-
-if (!building && !connectionString) {
-	throw new Error('DATABASE_URL missing.');
-}
+import { serverConfig } from '$lib/server/env';
 
 const pool = new Pool({
-	// Never actually connected to during the build's route-analysis step.
-	connectionString: building ? 'postgresql://build:build@localhost:5432/build' : connectionString,
+	connectionString: serverConfig.DATABASE_URL,
 	max: 5,
 	connectionTimeoutMillis: 5000
 });
