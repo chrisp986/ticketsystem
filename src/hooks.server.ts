@@ -16,7 +16,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	response.headers.set('x-request-id', requestId);
 
-	logger.info('request completed', {
+
+const level = event.url.pathname.startsWith('/health/') ? 'debug' : 'info';
+
+logger[level]('request completed', {
+
 		requestId,
 		method: event.request.method,
 		path: event.url.pathname,
