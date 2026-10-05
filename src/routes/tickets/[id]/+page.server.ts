@@ -69,6 +69,10 @@ export const actions = {
 				});
 			}
 
+			if (outcome === 'invalid_transition') {
+				return fail(422, { message: 'This status change is not allowed.' });
+			}
+
 			return { message: 'Status updated.' };
 		} catch (err) {
 			logger.error('failed to update ticket status', {

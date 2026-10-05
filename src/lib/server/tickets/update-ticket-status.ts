@@ -5,10 +5,11 @@ import type { z } from 'zod';
 import type { updateTicketStatusSchema } from '../../modules/tickets/ticket.validation';
 import { tickets } from '../db/schema/tickets';
 import { ticketStatusHistory } from '../db/schema/ticket-status-history';
+import { canTransition } from '../../modules/tickets/ticket.transitions';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 
-type UpdateTicketStatusResult = 'updated' | 'unchanged' | 'conflict';
+type UpdateTicketStatusResult = 'updated' | 'unchanged' | 'conflict' | 'invalid_transition';
 
 export async function updateTicketStatus(
 	database: NodePgDatabase,
@@ -33,6 +34,14 @@ export async function updateTicketStatus(
 
 		if (currentTicket.status === status) {
 			return 'unchanged';
+		}
+
+		if (currentTicket.status === status) {
+			return 'unchanged';
+		}
+
+		if (!canTransition(currentTicket.status, status)) {
+			return 'invalid_transition';
 		}
 
 		const now = new Date();

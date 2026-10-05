@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { ticketStatuses, ticketStatusLabels } from '$lib/modules/tickets/ticket.constants';
+	import { ticketStatusLabels } from '$lib/modules/tickets/ticket.constants';
+	import { allowedTransitions } from '$lib/modules/tickets/ticket.transitions';
 	import { resolve } from '$app/paths';
 
 	let { data, form }: PageProps = $props();
+
+	const statusOptions = $derived([data.ticket.status, ...allowedTransitions(data.ticket.status)]);
 </script>
 
 <a href={resolve('/')}>Back to tickets</a>
@@ -13,21 +16,25 @@
 <p>Ticket Nr.: {data.ticket.ticketNumber}</p>
 <p>Status: {ticketStatusLabels[data.ticket.status]}</p>
 
-<form method="POST" action="?/updateStatus">
-	<input type="hidden" name="expectedVersion" value={data.ticket.version} />
+{#if statusOptions.length > 1}
+	<form method="POST" action="?/updateStatus">
+		<input type="hidden" name="expectedVersion" value={data.ticket.version} />
 
-	<label for="status">Change status</label>
+		<label for="status">Change status</label>
 
-	<select id="status" name="status">
-		{#each ticketStatuses as status (status)}
-			<option value={status} selected={status === data.ticket.status}>
-				{ticketStatusLabels[status]}
-			</option>
-		{/each}
-	</select>
+		<select id="status" name="status">
+			{#each statusOptions as status (status)}
+				<option value={status} selected={status === data.ticket.status}>
+					{ticketStatusLabels[status]}
+				</option>
+			{/each}
+		</select>
 
-	<button type="submit">Save status</button>
-</form>
+		<button type="submit">Save status</button>
+	</form>
+{:else}
+	<p>Closed tickets cannot be changed.</p>
+{/if}
 
 <section aria-labelledby="status-history-heading">
 	<h2 id="status-history-heading">Status history</h2>

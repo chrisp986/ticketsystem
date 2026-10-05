@@ -207,19 +207,61 @@ test('closing a resolved ticket preserves its resolution timestamp', async () =>
 	}
 });
 
-test('reopening a closed ticket clears its lifecycle timestamps', async () => {
+test('a closed ticket cannot change status', async () => {
 	const resolvedTime = new Date('2020-01-01T00:00:00.000Z');
 	const closedTime = new Date('2020-01-02T00:00:00.000Z');
 
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
-			subject: 'Integration test: reopen closed ticket',
+			subject: 'Integration test: closed ticket is terminal',
 			status: 'closed',
 			createdAt: resolvedTime,
 			resolvedAt: resolvedTime,
 			closedAt: closedTime,
 			updatedAt: closedTime
+		})
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const outcome = await updateTicketStatus(testDb, {
+			ticketId: created.id,
+			status: 'in_progress',
+			expectedVersion: created.version
+		});
+
+		expect(outcome).toBe('invalid_transition');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toEqual(created);
+
+		const history = await testDb
+			.select()
+			.from(ticketStatusHistory)
+			.where(eq(ticketStatusHistory.ticketId, created.id));
+
+		expect(history).toHaveLength(0);
+	} finally {
+		await testDb.delete(tickets).where(eq(tickets.id, created.id));
+	}
+});
+
+test('reopening a resolved ticket clears its resolution timestamp', async () => {
+	const resolvedTime = new Date('2020-01-01T00:00:00.000Z');
+
+	const [created] = await testDb
+		.insert(tickets)
+		.values({
+			subject: 'Integration test: reopen resolved ticket',
+			status: 'resolved',
+			createdAt: resolvedTime,
+			resolvedAt: resolvedTime,
+			updatedAt: resolvedTime
 		})
 		.returning();
 
@@ -246,8 +288,19 @@ test('reopening a closed ticket clears its lifecycle timestamps', async () => {
 		expect(stored.version).toBe(created.version + 1);
 		expect(stored.resolvedAt).toBeNull();
 		expect(stored.closedAt).toBeNull();
-		expect(stored.updatedAt.getTime()).toBeGreaterThan(closedTime.getTime());
+		expect(stored.updatedAt.getTime()).toBeGreaterThan(resolvedTime.getTime());
 		expect(stored.createdAt).toEqual(created.createdAt);
+
+		const history = await testDb
+			.select()
+			.from(ticketStatusHistory)
+			.where(eq(ticketStatusHistory.ticketId, created.id));
+
+		expect(history).toHaveLength(1);
+		expect(history[0]).toMatchObject({
+			previousStatus: 'resolved',
+			newStatus: 'in_progress'
+		});
 	} finally {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}
