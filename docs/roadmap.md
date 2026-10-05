@@ -27,13 +27,14 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 - [ ] 1.6 Attention columns with manual clear
 - [ ] 1.7 UI: status, next steps, blockers, attention badge, overdue filter
 
-## Phase 2: Users and ownership
+## Phase 2: Users and ownership ([ADR 0005](adr/0005-ticket-notes.md))
 
 - [ ] 2.1 Session authentication and users
 - [ ] 2.2 Assignee and next-step owner
 - [ ] 2.3 Actor recorded on every change
-- [ ] 2.4 Views: my tickets, unassigned, my overdue
-- [ ] 2.5 Baseline metrics
+- [ ] 2.4 Ticket notes (internal note, phone call, on site) in the ticket timeline
+- [ ] 2.5 Views: my tickets, unassigned, my overdue
+- [ ] 2.6 Baseline metrics
 
 ## Phase 3: Background jobs ([ADR 0003](adr/0003-background-jobs-and-worker.md))
 
@@ -65,7 +66,7 @@ Done when: killing the worker mid-job loses nothing.
 - [ ] 6.1 LLM provider interface and Ollama adapter
 - [ ] 6.2 Minimal `ai_suggestions` table
 - [ ] 6.3 Structured output validated with Zod
-- [ ] 6.4 Summary (informational) and category (suggestion)
+- [ ] 6.4 Summary from emails and notes (informational) and category (suggestion)
 - [ ] 6.5 Measure latency and quality on the target hardware
 
 ## Phase 7: Human-in-the-loop
