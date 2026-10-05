@@ -13,7 +13,7 @@ Each step is sized to roughly one pull request. A phase is done when its accepta
 - [x] 0.3 Request IDs, structured logging, central error handling, error page
 - [x] 0.4 Validated, framework-neutral server configuration
 - [x] 0.5 adapter-node, dependency cleanup, health endpoints
-- [ ] 0.6 README, roadmap and first ADRs
+- [x] 0.6 README, roadmap and first ADRs
 
 Done when: every path to invalid data is closed, errors are traceable from screen to log, and decisions are documented.
 
