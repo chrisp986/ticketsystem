@@ -15,14 +15,14 @@ The system has six statuses, but the service accepts any transition (including `
 
 **Allowed transitions.**
 
-| From               | To                                                |
-| ------------------ | ------------------------------------------------- |
-| `new`              | `in_progress`, `waiting_*`, `resolved`, `closed`* |
-| `in_progress`      | `waiting_*`, `resolved`, `closed`*                |
-| `waiting_customer` | `in_progress`, `resolved`, `closed`*              |
-| `waiting_internal` | `in_progress`, `resolved`, `closed`*              |
-| `resolved`         | `in_progress` (reopen), `closed`                  |
-| `closed`           | none (terminal)                                   |
+| From               | To                                                       |
+| ------------------ | -------------------------------------------------------- |
+| `new`              | `in_progress`, `waiting_*`, `resolved`, `closed`*        |
+| `in_progress`      | `waiting_*`, `resolved`, `closed`*                       |
+| `waiting_customer` | `in_progress`, `waiting_internal`, `resolved`, `closed`* |
+| `waiting_internal` | `in_progress`, `waiting_customer`, `resolved`, `closed`* |
+| `resolved`         | `in_progress` (reopen), `closed`                         |
+| `closed`           | none (terminal)                                          |
 
 \* Closing without resolving requires a resolution other than `solved` or `workaround`.
 
@@ -30,6 +30,7 @@ The system has six statuses, but the service accepts any transition (including `
 
 - `new` is entry-only; nothing transitions back to it.
 - `resolved` is set by an agent and requires a resolution summary.
+- The two waiting statuses may change directly into each other when the blocker shifts between the customer and an internal dependency (for example: the part arrived and the customer must confirm a date, or the customer answered by phone and a part is now on order). Like every change into a waiting status, this requires a next step with a due date (ADR 0002).
 - Only a human closes a ticket. The system and AI may suggest closing, never execute it.
 - A guard function evaluates every transition and returns blockers (cannot proceed) and warnings (may proceed, optionally with a reason). The UI shows both, and the server re-checks on submit.
 - A customer reply automatically moves `resolved` and `waiting_customer` tickets to `in_progress`. This is a deterministic system rule, not an AI decision.
@@ -42,6 +43,7 @@ The system has six statuses, but the service accepts any transition (including `
 ## Consequences
 
 - Phase 1 must implement the transition map, the resolution field, the guard function and the actor fields; the current service still allows any transition.
+- The transition map and its edge tests include both edges between the waiting statuses.
 - Closing without resolving remains valid and is covered by a test, so tightening it later is a deliberate change.
 - Auto-reply detection becomes an acceptance criterion for inbound email.
 - Billing or similar requirements can later be added as additional guard checks without changing the status model.
