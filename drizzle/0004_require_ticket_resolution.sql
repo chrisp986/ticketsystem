@@ -1,0 +1,6 @@
+UPDATE "tickets" SET "resolution" = 'solved', "resolution_summary" = 'Resolved before resolution tracking was introduced.' WHERE "status" = 'resolved' OR ("status" = 'closed' AND "resolved_at" IS NOT NULL);--> statement-breakpoint
+UPDATE "tickets" SET "resolution" = 'not_actionable' WHERE "status" = 'closed' AND "resolved_at" IS NULL;--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_resolution_only_when_resolved_or_closed" CHECK ("tickets"."status" IN ('resolved', 'closed') OR ("tickets"."resolution" IS NULL AND "tickets"."resolution_summary" IS NULL));--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_resolved_has_resolution_and_summary" CHECK ("tickets"."status" <> 'resolved' OR ("tickets"."resolution" IS NOT NULL AND "tickets"."resolution" IN ('solved', 'workaround') AND "tickets"."resolution_summary" IS NOT NULL AND btrim("tickets"."resolution_summary") <> ''));--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_closed_has_resolution" CHECK ("tickets"."status" <> 'closed' OR "tickets"."resolution" IS NOT NULL);--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_closed_unresolved_not_solved" CHECK ("tickets"."status" <> 'closed' OR "tickets"."resolved_at" IS NOT NULL OR "tickets"."resolution" NOT IN ('solved', 'workaround'));

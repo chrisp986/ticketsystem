@@ -29,6 +29,13 @@
       "when": 1791354341660,
       "tag": "0003_add_ticket_resolution_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791374927968,
+      "tag": "0004_require_ticket_resolution",
+      "breakpoints": true
     }
   ]
 }
