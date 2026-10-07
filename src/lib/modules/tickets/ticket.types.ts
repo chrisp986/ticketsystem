@@ -1,6 +1,11 @@
 import type { z } from 'zod';
 
-import { ticketPriorities, ticketSources, ticketStatuses } from './ticket.constants';
+import {
+	ticketPriorities,
+	ticketSources,
+	ticketStatuses,
+	ticketResolutions
+} from './ticket.constants';
 
 import type {
 	createTicketSchema,
@@ -15,6 +20,8 @@ import type {
  */
 
 export type TicketStatus = (typeof ticketStatuses)[number];
+
+export type TicketResolution = (typeof ticketResolutions)[number];
 
 export type TicketPriority = (typeof ticketPriorities)[number];
 

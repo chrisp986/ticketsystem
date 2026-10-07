@@ -32,6 +32,32 @@ test('rejects a new ticket with closedAt', async () => {
 	});
 });
 
+test('rejects a resolved ticket without firstResolvedAt', async () => {
+	await expect(
+		testDb
+			.insert(tickets)
+			.values({
+				subject: 'Constraint test: resolved without firstResolvedAt',
+				status: 'resolved',
+				resolvedAt: someTime
+			})
+			.execute()
+	).rejects.toMatchObject({
+		cause: { code: '23514', constraint: 'tickets_resolved_at_has_first_resolved_at' }
+	});
+});
+
+test('rejects a negative reopen count', async () => {
+	await expect(
+		testDb
+			.insert(tickets)
+			.values({ subject: 'Constraint test: negative reopen count', reopenCount: -1 })
+			.execute()
+	).rejects.toMatchObject({
+		cause: { code: '23514', constraint: 'tickets_reopen_count_not_negative' }
+	});
+});
+
 test('rejects a resolved ticket without resolvedAt', async () => {
 	await expect(
 		testDb
@@ -50,7 +76,8 @@ test('rejects a new ticket with resolvedAt', async () => {
 			.values({
 				subject: 'Constraint test: new with resolvedAt',
 				status: 'new',
-				resolvedAt: someTime
+				resolvedAt: someTime,
+				firstResolvedAt: someTime
 			})
 			.execute()
 	).rejects.toMatchObject({

@@ -5,7 +5,8 @@ import { index, integer, pgEnum, pgTable, text, timestamp, uuid, check } from 'd
 import {
 	ticketPriorities,
 	ticketSources,
-	ticketStatuses
+	ticketStatuses,
+	ticketResolutions
 } from '$lib/modules/tickets/ticket.constants';
 
 /**
@@ -19,6 +20,8 @@ export const ticketStatus = pgEnum('ticket_status', ticketStatuses);
 export const ticketPriority = pgEnum('ticket_priority', ticketPriorities);
 
 export const ticketSource = pgEnum('ticket_source', ticketSources);
+
+export const ticketResolution = pgEnum('ticket_resolution', ticketResolutions);
 
 /**
  * Tickets table.
@@ -65,6 +68,17 @@ export const tickets = pgTable(
 			.defaultNow()
 			.notNull(),
 
+		resolution: ticketResolution('resolution'),
+
+		resolutionSummary: text('resolution_summary'),
+
+		firstResolvedAt: timestamp('first_resolved_at', {
+			withTimezone: true,
+			mode: 'date'
+		}),
+
+		reopenCount: integer('reopen_count').default(0).notNull(),
+
 		updatedAt: timestamp('updated_at', {
 			withTimezone: true,
 			mode: 'date'
@@ -90,6 +104,11 @@ export const tickets = pgTable(
 		check(
 			'tickets_resolved_at_only_when_resolved_or_closed',
 			sql`${table.status} IN ('resolved', 'closed') OR ${table.resolvedAt} IS NULL`
+		),
+		check('tickets_reopen_count_not_negative', sql`${table.reopenCount} >= 0`),
+		check(
+			'tickets_resolved_at_has_first_resolved_at',
+			sql`${table.resolvedAt} IS NULL OR ${table.firstResolvedAt} IS NOT NULL`
 		)
 	]
 );

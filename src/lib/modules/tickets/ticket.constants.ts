@@ -31,6 +31,29 @@ export const ticketStatusLabels = {
 } satisfies Record<(typeof ticketStatuses)[number], string>;
 
 /**
+ * How a ticket ended. Separate from the status (ADR 0001).
+ */
+export const ticketResolutions = [
+	'solved',
+	'workaround',
+	'duplicate',
+	'not_actionable',
+	'withdrawn',
+	'no_response',
+	'wont_fix'
+] as const;
+
+export const ticketResolutionLabels = {
+	solved: 'Solved',
+	workaround: 'Workaround',
+	duplicate: 'Duplicate',
+	not_actionable: 'Not actionable',
+	withdrawn: 'Withdrawn',
+	no_response: 'No response',
+	wont_fix: "Won't fix"
+} satisfies Record<(typeof ticketResolutions)[number], string>;
+
+/**
  * Ticket priorities.
  */
 export const ticketPriorities = ['low', 'medium', 'high', 'critical'] as const;

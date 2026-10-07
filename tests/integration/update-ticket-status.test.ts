@@ -173,7 +173,8 @@ test('closing a resolved ticket preserves its resolution timestamp', async () =>
 			subject: 'Integration test: close resolved ticket',
 			status: 'resolved',
 			resolvedAt: resolvedTime,
-			updatedAt: resolvedTime
+			updatedAt: resolvedTime,
+			firstResolvedAt: resolvedTime
 		})
 		.returning();
 
@@ -218,6 +219,7 @@ test('a closed ticket cannot change status', async () => {
 			status: 'closed',
 			createdAt: resolvedTime,
 			resolvedAt: resolvedTime,
+			firstResolvedAt: resolvedTime,
 			closedAt: closedTime,
 			updatedAt: closedTime
 		})
@@ -261,7 +263,8 @@ test('reopening a resolved ticket clears its resolution timestamp', async () => 
 			status: 'resolved',
 			createdAt: resolvedTime,
 			resolvedAt: resolvedTime,
-			updatedAt: resolvedTime
+			updatedAt: resolvedTime,
+			firstResolvedAt: resolvedTime
 		})
 		.returning();
 
@@ -301,6 +304,51 @@ test('reopening a resolved ticket clears its resolution timestamp', async () => 
 			previousStatus: 'resolved',
 			newStatus: 'in_progress'
 		});
+	} finally {
+		await testDb.delete(tickets).where(eq(tickets.id, created.id));
+	}
+});
+
+test('reopening counts the reopen and keeps the first resolution time', async () => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({ subject: 'Integration test: reopen metrics', status: 'in_progress' })
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const steps = ['resolved', 'in_progress', 'resolved'] as const;
+		let version = created.version;
+		let firstResolvedAt: Date | null = null;
+
+		for (const status of steps) {
+			const outcome = await updateTicketStatus(testDb, {
+				ticketId: created.id,
+				status,
+				expectedVersion: version
+			});
+
+			expect(outcome).toBe('updated');
+			version += 1;
+
+			const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+			if (!stored) {
+				throw new Error('Test ticket disappeared.');
+			}
+
+			firstResolvedAt ??= stored.firstResolvedAt;
+			expect(stored.firstResolvedAt).toEqual(firstResolvedAt);
+		}
+
+		const [final] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(final?.reopenCount).toBe(1);
+		expect(final?.firstResolvedAt).toBeInstanceOf(Date);
+		expect(final?.resolvedAt?.getTime()).toBeGreaterThanOrEqual(firstResolvedAt!.getTime());
 	} finally {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}
