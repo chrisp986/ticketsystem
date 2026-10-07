@@ -21,7 +21,9 @@ export async function updateTicketStatus(
 		const [currentTicket] = await tx
 			.select({
 				status: tickets.status,
-				version: tickets.version
+				version: tickets.version,
+				firstResolvedAt: tickets.firstResolvedAt,
+				reopenCount: tickets.reopenCount
 			})
 			.from(tickets)
 			.where(eq(tickets.id, ticketId))
@@ -36,15 +38,13 @@ export async function updateTicketStatus(
 			return 'unchanged';
 		}
 
-		if (currentTicket.status === status) {
-			return 'unchanged';
-		}
-
 		if (!canTransition(currentTicket.status, status)) {
 			return 'invalid_transition';
 		}
 
 		const now = new Date();
+
+		const isReopen = currentTicket.status === 'resolved' && status === 'in_progress';
 
 		await tx
 			.update(tickets)
@@ -54,7 +54,12 @@ export async function updateTicketStatus(
 				updatedAt: now,
 				resolvedAt:
 					status === 'resolved' ? now : status === 'closed' ? sql`${tickets.resolvedAt}` : null,
-				closedAt: status === 'closed' ? now : null
+				closedAt: status === 'closed' ? now : null,
+				firstResolvedAt:
+					status === 'resolved'
+						? (currentTicket.firstResolvedAt ?? now)
+						: currentTicket.firstResolvedAt,
+				reopenCount: isReopen ? currentTicket.reopenCount + 1 : currentTicket.reopenCount
 			})
 			.where(eq(tickets.id, ticketId));
 
