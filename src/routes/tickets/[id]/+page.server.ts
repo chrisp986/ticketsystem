@@ -43,11 +43,16 @@ export const actions = {
 	updateStatus: async ({ request, params, locals }) => {
 		const formData = await request.formData();
 		const versionValue = formData.get('expectedVersion');
+		const resolutionValue = formData.get('resolution');
+		const summaryValue = formData.get('resolutionSummary');
 
 		const result = updateTicketStatusSchema.safeParse({
 			ticketId: params.id,
 			status: formData.get('status'),
-			expectedVersion: typeof versionValue === 'string' ? Number(versionValue) : undefined
+			expectedVersion: typeof versionValue === 'string' ? Number(versionValue) : undefined,
+			resolution:
+				typeof resolutionValue === 'string' && resolutionValue !== '' ? resolutionValue : undefined,
+			resolutionSummary: typeof summaryValue === 'string' ? summaryValue : undefined
 		});
 
 		if (!result.success) {
@@ -71,6 +76,13 @@ export const actions = {
 
 			if (outcome === 'invalid_transition') {
 				return fail(422, { message: 'This status change is not allowed.' });
+			}
+
+			if (outcome === 'resolution_required') {
+				return fail(422, {
+					message:
+						'Resolving needs a resolution and a summary. Closing an unresolved ticket needs a reason.'
+				});
 			}
 
 			return { message: 'Status updated.' };

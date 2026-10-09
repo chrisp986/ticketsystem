@@ -1,12 +1,28 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { ticketStatusLabels } from '$lib/modules/tickets/ticket.constants';
+	import {
+		closingResolutions,
+		resolvingResolutions,
+		ticketResolutionLabels,
+		ticketStatusLabels
+	} from '$lib/modules/tickets/ticket.constants';
 	import { allowedTransitions } from '$lib/modules/tickets/ticket.transitions';
 	import { resolve } from '$app/paths';
 
 	let { data, form }: PageProps = $props();
 
 	const statusOptions = $derived([data.ticket.status, ...allowedTransitions(data.ticket.status)]);
+
+	let selectedStatus = $derived(data.ticket.status);
+
+	const needsResolution = $derived(
+		selectedStatus === 'resolved' ||
+			(selectedStatus === 'closed' && data.ticket.status !== 'resolved')
+	);
+
+	const resolutionOptions = $derived(
+		selectedStatus === 'resolved' ? resolvingResolutions : closingResolutions
+	);
 </script>
 
 <a href={resolve('/')}>Back to tickets</a>
@@ -16,19 +32,45 @@
 <p>Ticket Nr.: {data.ticket.ticketNumber}</p>
 <p>Status: {ticketStatusLabels[data.ticket.status]}</p>
 
+{#if data.ticket.resolution}
+	<p>Resolution: {ticketResolutionLabels[data.ticket.resolution]}</p>
+	{#if data.ticket.resolutionSummary}
+		<p class="description">{data.ticket.resolutionSummary}</p>
+	{/if}
+{/if}
+
 {#if statusOptions.length > 1}
 	<form method="POST" action="?/updateStatus">
 		<input type="hidden" name="expectedVersion" value={data.ticket.version} />
 
 		<label for="status">Change status</label>
 
-		<select id="status" name="status">
+		<select id="status" name="status" bind:value={selectedStatus}>
 			{#each statusOptions as status (status)}
-				<option value={status} selected={status === data.ticket.status}>
-					{ticketStatusLabels[status]}
-				</option>
+				<option value={status}>{ticketStatusLabels[status]}</option>
 			{/each}
 		</select>
+
+		{#if needsResolution}
+			<label for="resolution">Resolution</label>
+
+			<select id="resolution" name="resolution" required>
+				<option value="">Please choose</option>
+				{#each resolutionOptions as resolution (resolution)}
+					<option value={resolution}>{ticketResolutionLabels[resolution]}</option>
+				{/each}
+			</select>
+
+			<label for="resolutionSummary">
+				Summary{selectedStatus === 'resolved' ? '' : ' (optional)'}
+			</label>
+
+			<textarea
+				id="resolutionSummary"
+				name="resolutionSummary"
+				maxlength="2000"
+				required={selectedStatus === 'resolved'}></textarea>
+		{/if}
 
 		<button type="submit">Save status</button>
 	</form>
