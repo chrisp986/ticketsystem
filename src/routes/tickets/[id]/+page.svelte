@@ -51,6 +51,8 @@
 			{/each}
 		</select>
 
+		<label for="reason">Reason (optional)</label>
+		<input id="reason" name="reason" maxlength="500" />
 		{#if needsResolution}
 			<label for="resolution">Resolution</label>
 
@@ -90,16 +92,30 @@
 			{#each data.statusHistory as entry (entry.id)}
 				<li>
 					<span>
-						{entry.previousStatus.replaceAll('_', ' ')}
+						{ticketStatusLabels[entry.previousStatus]}
 						→
-						{entry.newStatus.replaceAll('_', ' ')}
+						{ticketStatusLabels[entry.newStatus]}
 					</span>
+
+					<span>by {entry.actorType}</span>
 
 					<time datetime={entry.changedAt.toISOString()}>
 						{entry.changedAt.toLocaleString('en-GB', {
 							timeZone: 'UTC'
 						})}
 					</time>
+
+					{#if entry.resolution}
+						<p>Resolution: {ticketResolutionLabels[entry.resolution]}</p>
+					{/if}
+
+					{#if entry.resolutionSummary}
+						<p class="description">{entry.resolutionSummary}</p>
+					{/if}
+
+					{#if entry.reason}
+						<p>Reason: {entry.reason}</p>
+					{/if}
 				</li>
 			{/each}
 		</ol>
