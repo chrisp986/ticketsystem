@@ -1,10 +1,11 @@
 import type { z } from 'zod';
 
 import {
+	actorTypes,
 	ticketPriorities,
+	ticketResolutions,
 	ticketSources,
-	ticketStatuses,
-	ticketResolutions
+	ticketStatuses
 } from './ticket.constants';
 
 import type {
@@ -46,3 +47,10 @@ export type CreateTicketInput = z.infer<typeof createTicketSchema>;
  * Input for changing the ticket status.
  */
 export type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
+
+export type ActorType = (typeof actorTypes)[number];
+
+export type Actor = {
+	type: ActorType;
+	id?: string;
+};

@@ -65,3 +65,8 @@ export const ticketPriorities = ['low', 'medium', 'high', 'critical'] as const;
  * Supported ticket creation channels.
  */
 export const ticketSources = ['manual', 'email', 'web', 'api'] as const;
+
+/**
+ * Who made a change (ADR 0001).
+ */
+export const actorTypes = ['user', 'system', 'ai'] as const;

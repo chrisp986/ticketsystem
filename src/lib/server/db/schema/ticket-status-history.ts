@@ -1,6 +1,10 @@
-import { index, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import { tickets, ticketStatus } from './tickets';
+import { actorTypes } from '$lib/modules/tickets/ticket.constants';
+
+import { ticketResolution, tickets, ticketStatus } from './tickets';
+
+export const actorType = pgEnum('actor_type', actorTypes);
 
 export const ticketStatusHistory = pgTable(
 	'ticket_status_history',
@@ -9,11 +13,21 @@ export const ticketStatusHistory = pgTable(
 
 		ticketId: uuid('ticket_id')
 			.notNull()
-			.references(() => tickets.id, { onDelete: 'cascade' }),
+			.references(() => tickets.id, { onDelete: 'restrict' }),
 
 		previousStatus: ticketStatus('previous_status').notNull(),
 
 		newStatus: ticketStatus('new_status').notNull(),
+
+		actorType: actorType('actor_type').notNull(),
+
+		actorId: text('actor_id'),
+
+		reason: text('reason'),
+
+		resolution: ticketResolution('resolution'),
+
+		resolutionSummary: text('resolution_summary'),
 
 		changedAt: timestamp('changed_at', {
 			withTimezone: true,

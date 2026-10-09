@@ -76,5 +76,6 @@ export const updateTicketStatusSchema = z.object({
 	status: ticketStatusSchema,
 	expectedVersion: z.number().int().positive(),
 	resolution: ticketResolutionSchema.optional(),
-	resolutionSummary: z.string().trim().max(2000).optional()
+	resolutionSummary: z.string().trim().max(2000).optional(),
+	reason: z.string().trim().max(500).optional()
 });
