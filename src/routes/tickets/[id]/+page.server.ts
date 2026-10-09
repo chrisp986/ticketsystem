@@ -45,6 +45,7 @@ export const actions = {
 		const versionValue = formData.get('expectedVersion');
 		const resolutionValue = formData.get('resolution');
 		const summaryValue = formData.get('resolutionSummary');
+		const reasonValue = formData.get('reason');
 
 		const result = updateTicketStatusSchema.safeParse({
 			ticketId: params.id,
@@ -52,7 +53,8 @@ export const actions = {
 			expectedVersion: typeof versionValue === 'string' ? Number(versionValue) : undefined,
 			resolution:
 				typeof resolutionValue === 'string' && resolutionValue !== '' ? resolutionValue : undefined,
-			resolutionSummary: typeof summaryValue === 'string' ? summaryValue : undefined
+			resolutionSummary: typeof summaryValue === 'string' ? summaryValue : undefined,
+			reason: typeof reasonValue === 'string' ? reasonValue : undefined
 		});
 
 		if (!result.success) {
@@ -62,7 +64,7 @@ export const actions = {
 		}
 
 		try {
-			const outcome = await updateTicketStatus(db, result.data);
+			const outcome = await updateTicketStatus(db, result.data, { type: 'user' });
 
 			if (outcome === 'unchanged') {
 				return { message: 'Status is already up to date.' };
