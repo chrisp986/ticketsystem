@@ -6,16 +6,18 @@ import type { updateTicketStatusSchema } from '../../modules/tickets/ticket.vali
 import { tickets } from '../db/schema/tickets';
 import { ticketStatusHistory } from '../db/schema/ticket-status-history';
 import { canTransition } from '../../modules/tickets/ticket.transitions';
+import { isResolutionValid } from '../../modules/tickets/ticket.resolution';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 
-type UpdateTicketStatusResult = 'updated' | 'unchanged' | 'conflict' | 'invalid_transition';
+type UpdateTicketStatusResult =
+	'updated' | 'unchanged' | 'conflict' | 'invalid_transition' | 'resolution_required';
 
 export async function updateTicketStatus(
 	database: NodePgDatabase,
 	input: UpdateTicketStatusInput
 ): Promise<UpdateTicketStatusResult> {
-	const { ticketId, status, expectedVersion } = input;
+	const { ticketId, status, expectedVersion, resolution, resolutionSummary } = input;
 
 	return database.transaction(async (tx): Promise<UpdateTicketStatusResult> => {
 		const [currentTicket] = await tx
@@ -23,7 +25,9 @@ export async function updateTicketStatus(
 				status: tickets.status,
 				version: tickets.version,
 				firstResolvedAt: tickets.firstResolvedAt,
-				reopenCount: tickets.reopenCount
+				reopenCount: tickets.reopenCount,
+				resolution: tickets.resolution,
+				resolutionSummary: tickets.resolutionSummary
 			})
 			.from(tickets)
 			.where(eq(tickets.id, ticketId))
@@ -42,6 +46,14 @@ export async function updateTicketStatus(
 			return 'invalid_transition';
 		}
 
+		const keepsResolution = currentTicket.status === 'resolved' && status === 'closed';
+
+		if (!keepsResolution && !isResolutionValid(status, resolution, resolutionSummary)) {
+			return 'resolution_required';
+		}
+
+		const endsTicket = status === 'resolved' || status === 'closed';
+
 		const now = new Date();
 
 		const isReopen = currentTicket.status === 'resolved' && status === 'in_progress';
@@ -59,7 +71,17 @@ export async function updateTicketStatus(
 					status === 'resolved'
 						? (currentTicket.firstResolvedAt ?? now)
 						: currentTicket.firstResolvedAt,
-				reopenCount: isReopen ? currentTicket.reopenCount + 1 : currentTicket.reopenCount
+				reopenCount: isReopen ? currentTicket.reopenCount + 1 : currentTicket.reopenCount,
+				resolution: keepsResolution
+					? currentTicket.resolution
+					: endsTicket
+						? (resolution ?? null)
+						: null,
+				resolutionSummary: keepsResolution
+					? currentTicket.resolutionSummary
+					: endsTicket
+						? resolutionSummary || null
+						: null
 			})
 			.where(eq(tickets.id, ticketId));
 

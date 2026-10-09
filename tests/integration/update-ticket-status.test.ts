@@ -66,6 +66,8 @@ test('resolving a ticket updates its status, version and timestamps', async () =
 
 	try {
 		const outcome = await updateTicketStatus(testDb, {
+			resolution: 'solved',
+			resolutionSummary: 'Fixed in the test.',
 			ticketId: created.id,
 			status: 'resolved',
 			expectedVersion: created.version
@@ -114,7 +116,9 @@ test('an outdated version cannot overwrite a newer status change', async () => {
 		const firstOutcome = await updateTicketStatus(testDb, {
 			ticketId: created.id,
 			status: 'resolved',
-			expectedVersion: created.version
+			expectedVersion: created.version,
+			resolution: 'solved',
+			resolutionSummary: 'Fixed in the test.'
 		});
 
 		expect(firstOutcome).toBe('updated');
@@ -174,7 +178,9 @@ test('closing a resolved ticket preserves its resolution timestamp', async () =>
 			status: 'resolved',
 			resolvedAt: resolvedTime,
 			updatedAt: resolvedTime,
-			firstResolvedAt: resolvedTime
+			firstResolvedAt: resolvedTime,
+			resolution: 'solved',
+			resolutionSummary: 'Fixed in the test.'
 		})
 		.returning();
 
@@ -198,6 +204,8 @@ test('closing a resolved ticket preserves its resolution timestamp', async () =>
 		}
 
 		expect(stored.status).toBe('closed');
+		expect(stored.resolution).toBe('solved');
+		expect(stored.resolutionSummary).toBe('Fixed in the test.');
 		expect(stored.version).toBe(created.version + 1);
 		expect(stored.resolvedAt).toEqual(created.resolvedAt);
 		expect(stored.closedAt).toBeInstanceOf(Date);
@@ -221,7 +229,9 @@ test('a closed ticket cannot change status', async () => {
 			resolvedAt: resolvedTime,
 			firstResolvedAt: resolvedTime,
 			closedAt: closedTime,
-			updatedAt: closedTime
+			updatedAt: closedTime,
+			resolution: 'solved',
+			resolutionSummary: 'Fixed in the test.'
 		})
 		.returning();
 
@@ -264,7 +274,9 @@ test('reopening a resolved ticket clears its resolution timestamp', async () => 
 			createdAt: resolvedTime,
 			resolvedAt: resolvedTime,
 			updatedAt: resolvedTime,
-			firstResolvedAt: resolvedTime
+			firstResolvedAt: resolvedTime,
+			resolution: 'solved',
+			resolutionSummary: 'Fixed in the test.'
 		})
 		.returning();
 
@@ -290,6 +302,8 @@ test('reopening a resolved ticket clears its resolution timestamp', async () => 
 		expect(stored.status).toBe('in_progress');
 		expect(stored.version).toBe(created.version + 1);
 		expect(stored.resolvedAt).toBeNull();
+		expect(stored.resolution).toBeNull();
+		expect(stored.resolutionSummary).toBeNull();
 		expect(stored.closedAt).toBeNull();
 		expect(stored.updatedAt.getTime()).toBeGreaterThan(resolvedTime.getTime());
 		expect(stored.createdAt).toEqual(created.createdAt);
@@ -328,6 +342,8 @@ test('reopening counts the reopen and keeps the first resolution time', async ()
 			const outcome = await updateTicketStatus(testDb, {
 				ticketId: created.id,
 				status,
+				resolution: 'solved',
+				resolutionSummary: 'Fixed in the test.',
 				expectedVersion: version
 			});
 
@@ -349,6 +365,72 @@ test('reopening counts the reopen and keeps the first resolution time', async ()
 		expect(final?.reopenCount).toBe(1);
 		expect(final?.firstResolvedAt).toBeInstanceOf(Date);
 		expect(final?.resolvedAt?.getTime()).toBeGreaterThanOrEqual(firstResolvedAt!.getTime());
+	} finally {
+		await testDb.delete(tickets).where(eq(tickets.id, created.id));
+	}
+});
+
+test.each([
+	['resolving without a summary', 'resolved', 'solved'],
+	['resolving without a resolution', 'resolved', undefined],
+	['closing an unresolved ticket as solved', 'closed', 'solved'],
+	['closing an unresolved ticket without a reason', 'closed', undefined]
+] as const)('%s is rejected', async (_name, status, resolution) => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({ subject: 'Integration test: resolution required', status: 'in_progress' })
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const outcome = await updateTicketStatus(testDb, {
+			ticketId: created.id,
+			status,
+			resolution,
+			expectedVersion: created.version
+		});
+
+		expect(outcome).toBe('resolution_required');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toEqual(created);
+	} finally {
+		await testDb.delete(tickets).where(eq(tickets.id, created.id));
+	}
+});
+
+test('closing an unresolved ticket stores the reason', async () => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({ subject: 'Integration test: close as duplicate', status: 'in_progress' })
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const outcome = await updateTicketStatus(testDb, {
+			ticketId: created.id,
+			status: 'closed',
+			resolution: 'duplicate',
+			expectedVersion: created.version
+		});
+
+		expect(outcome).toBe('updated');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toMatchObject({
+			status: 'closed',
+			resolution: 'duplicate',
+			resolutionSummary: null,
+			resolvedAt: null
+		});
 	} finally {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}

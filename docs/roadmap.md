@@ -20,7 +20,7 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 ## Phase 1: Ticket lifecycle ([ADR 0001](adr/0001-ticket-status-lifecycle.md), [ADR 0002](adr/0002-attention-and-next-step.md))
 
 - [x] 1.1 Transition map enforced in the service, with tests for every edge
-- [ ] 1.2 Resolution field and summary, `first_resolved_at`, `reopen_count`, extended constraints
+- [x] 1.2 Resolution field and summary, `first_resolved_at`, `reopen_count`, extended constraints
 - [ ] 1.3 History with actor type, actor and reason; foreign key `restrict`
 - [ ] 1.4 Guard function returning blockers and warnings
 - [ ] 1.5 Next step and due date with per-status defaults and the database invariant

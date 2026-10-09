@@ -109,6 +109,22 @@ export const tickets = pgTable(
 		check(
 			'tickets_resolved_at_has_first_resolved_at',
 			sql`${table.resolvedAt} IS NULL OR ${table.firstResolvedAt} IS NOT NULL`
+		),
+		check(
+			'tickets_resolution_only_when_resolved_or_closed',
+			sql`${table.status} IN ('resolved', 'closed') OR (${table.resolution} IS NULL AND ${table.resolutionSummary} IS NULL)`
+		),
+		check(
+			'tickets_resolved_has_resolution_and_summary',
+			sql`${table.status} <> 'resolved' OR (${table.resolution} IS NOT NULL AND ${table.resolution} IN ('solved', 'workaround') AND ${table.resolutionSummary} IS NOT NULL AND btrim(${table.resolutionSummary}) <> '')`
+		),
+		check(
+			'tickets_closed_has_resolution',
+			sql`${table.status} <> 'closed' OR ${table.resolution} IS NOT NULL`
+		),
+		check(
+			'tickets_closed_unresolved_not_solved',
+			sql`${table.status} <> 'closed' OR ${table.resolvedAt} IS NOT NULL OR ${table.resolution} NOT IN ('solved', 'workaround')`
 		)
 	]
 );

@@ -30,18 +30,21 @@ export const ticketStatusLabels = {
 	closed: 'Closed'
 } satisfies Record<(typeof ticketStatuses)[number], string>;
 
-/**
- * How a ticket ended. Separate from the status (ADR 0001).
- */
-export const ticketResolutions = [
-	'solved',
-	'workaround',
+export const resolvingResolutions = ['solved', 'workaround'] as const;
+
+export const closingResolutions = [
 	'duplicate',
 	'not_actionable',
 	'withdrawn',
 	'no_response',
 	'wont_fix'
 ] as const;
+
+export const ticketResolutions = [...resolvingResolutions, ...closingResolutions] as const;
+
+/**
+ * How a ticket ended. Separate from the status (ADR 0001).
+ */
 
 export const ticketResolutionLabels = {
 	solved: 'Solved',
