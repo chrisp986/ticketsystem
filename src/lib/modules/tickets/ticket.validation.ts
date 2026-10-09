@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import { ticketPriorities, ticketSources, ticketStatuses } from './ticket.constants';
+import {
+	ticketPriorities,
+	ticketSources,
+	ticketStatuses,
+	ticketResolutions
+} from './ticket.constants';
 
 /**
  * Reusable validation for individual ticket fields.
@@ -11,6 +16,8 @@ export const ticketStatusSchema = z.enum(ticketStatuses);
 export const ticketPrioritySchema = z.enum(ticketPriorities);
 
 export const ticketSourceSchema = z.enum(ticketSources);
+
+export const ticketResolutionSchema = z.enum(ticketResolutions);
 
 /**
  * Complete ticket.
@@ -52,13 +59,9 @@ export const ticketSourceSchema = z.enum(ticketSources);
  */
 export const createTicketSchema = z.object({
 	subject: z.string().trim(),
-
 	description: z.string().trim().nullable().optional(),
-
 	priority: ticketPrioritySchema.default('medium'),
-
 	source: ticketSourceSchema.default('manual'),
-
 	tags: z.array(z.string()).default([])
 });
 
@@ -70,8 +73,8 @@ export const createTicketSchema = z.object({
  */
 export const updateTicketStatusSchema = z.object({
 	ticketId: z.uuid(),
-
 	status: ticketStatusSchema,
-
-	expectedVersion: z.number().int().positive()
+	expectedVersion: z.number().int().positive(),
+	resolution: ticketResolutionSchema.optional(),
+	resolutionSummary: z.string().trim().max(2000).optional()
 });
