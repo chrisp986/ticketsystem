@@ -3,6 +3,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { z } from 'zod';
 
 import type { updateTicketStatusSchema } from '../../modules/tickets/ticket.validation';
+import type { Actor } from '../../modules/tickets/ticket.types';
 import { tickets } from '../db/schema/tickets';
 import { ticketStatusHistory } from '../db/schema/ticket-status-history';
 import { canTransition } from '../../modules/tickets/ticket.transitions';
@@ -15,9 +16,10 @@ type UpdateTicketStatusResult =
 
 export async function updateTicketStatus(
 	database: NodePgDatabase,
-	input: UpdateTicketStatusInput
+	input: UpdateTicketStatusInput,
+	actor: Actor
 ): Promise<UpdateTicketStatusResult> {
-	const { ticketId, status, expectedVersion, resolution, resolutionSummary } = input;
+	const { ticketId, status, expectedVersion, resolution, resolutionSummary, reason } = input;
 
 	return database.transaction(async (tx): Promise<UpdateTicketStatusResult> => {
 		const [currentTicket] = await tx
@@ -54,6 +56,18 @@ export async function updateTicketStatus(
 
 		const endsTicket = status === 'resolved' || status === 'closed';
 
+		const nextResolution = keepsResolution
+			? currentTicket.resolution
+			: endsTicket
+				? (resolution ?? null)
+				: null;
+
+		const nextResolutionSummary = keepsResolution
+			? currentTicket.resolutionSummary
+			: endsTicket
+				? resolutionSummary || null
+				: null;
+
 		const now = new Date();
 
 		const isReopen = currentTicket.status === 'resolved' && status === 'in_progress';
@@ -72,16 +86,8 @@ export async function updateTicketStatus(
 						? (currentTicket.firstResolvedAt ?? now)
 						: currentTicket.firstResolvedAt,
 				reopenCount: isReopen ? currentTicket.reopenCount + 1 : currentTicket.reopenCount,
-				resolution: keepsResolution
-					? currentTicket.resolution
-					: endsTicket
-						? (resolution ?? null)
-						: null,
-				resolutionSummary: keepsResolution
-					? currentTicket.resolutionSummary
-					: endsTicket
-						? resolutionSummary || null
-						: null
+				resolution: nextResolution,
+				resolutionSummary: nextResolutionSummary
 			})
 			.where(eq(tickets.id, ticketId));
 
@@ -89,7 +95,12 @@ export async function updateTicketStatus(
 			ticketId,
 			previousStatus: currentTicket.status,
 			newStatus: status,
-			changedAt: now
+			changedAt: now,
+			actorType: actor.type,
+			actorId: actor.id ?? null,
+			reason: reason || null,
+			resolution: nextResolution,
+			resolutionSummary: nextResolutionSummary
 		});
 
 		return 'updated';
