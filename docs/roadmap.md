@@ -22,7 +22,7 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 - [x] 1.1 Transition map enforced in the service, with tests for every edge
 - [x] 1.2 Resolution field and summary, `first_resolved_at`, `reopen_count`, extended constraints
 - [x] 1.3 History with actor type, actor and reason; foreign key `restrict`
-- [ ] 1.4 Guard function returning blockers and warnings
+- [x] 1.4 Guard function returning blockers and warnings
 - [ ] 1.5 Next step and due date with per-status defaults and the database invariant
 - [ ] 1.6 Attention columns with manual clear
 - [ ] 1.7 UI: status, next steps, blockers, attention badge, overdue filter
