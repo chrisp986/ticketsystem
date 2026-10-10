@@ -74,3 +74,29 @@ test('creates a ticket not with the defaults', async () => {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}
 });
+
+test('a new ticket starts with triage due in one business hour', async () => {
+	const fridayMorning = new Date('2026-10-09T10:00:00+02:00');
+
+	const created = await createTicket(
+		testDb,
+		{
+			subject: 'Integration test: next step on creation',
+			priority: 'medium',
+			source: 'manual',
+			tags: []
+		},
+		fridayMorning
+	);
+
+	try {
+		expect(created.nextStep).toBe('Triage the request');
+		expect(created.nextStepDue?.toISOString()).toBe('2026-10-09T09:00:00.000Z');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toEqual(created);
+	} finally {
+		await testDb.delete(tickets).where(eq(tickets.id, created.id));
+	}
+});
