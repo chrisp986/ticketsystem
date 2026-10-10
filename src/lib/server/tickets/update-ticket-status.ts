@@ -6,8 +6,7 @@ import type { updateTicketStatusSchema } from '../../modules/tickets/ticket.vali
 import type { Actor } from '../../modules/tickets/ticket.types';
 import { tickets } from '../db/schema/tickets';
 import { ticketStatusHistory } from '../db/schema/ticket-status-history';
-import { canTransition } from '../../modules/tickets/ticket.transitions';
-import { isResolutionValid } from '../../modules/tickets/ticket.resolution';
+import { checkStatusChange } from '../../modules/tickets/ticket.guard';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 
@@ -44,15 +43,18 @@ export async function updateTicketStatus(
 			return 'unchanged';
 		}
 
-		if (!canTransition(currentTicket.status, status)) {
-			return 'invalid_transition';
+		const guard = checkStatusChange(
+			{ status: currentTicket.status, reopenCount: currentTicket.reopenCount },
+			{ to: status, resolution, resolutionSummary }
+		);
+
+		const [blocker] = guard.blockers;
+
+		if (blocker) {
+			return blocker.code;
 		}
 
 		const keepsResolution = currentTicket.status === 'resolved' && status === 'closed';
-
-		if (!keepsResolution && !isResolutionValid(status, resolution, resolutionSummary)) {
-			return 'resolution_required';
-		}
 
 		const endsTicket = status === 'resolved' || status === 'closed';
 
