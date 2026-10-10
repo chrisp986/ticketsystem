@@ -172,3 +172,14 @@ test('allows closing a ticket that was never resolved', async () => {
 		await testDb.delete(tickets).where(eq(tickets.id, created.id));
 	}
 });
+
+test('rejects an open ticket without a next-step due date', async () => {
+	await expect(
+		testDb
+			.insert(tickets)
+			.values({ subject: 'Constraint test: open without due', nextStepDue: null })
+			.execute()
+	).rejects.toMatchObject({
+		cause: { code: '23514', constraint: 'tickets_open_has_next_step_due' }
+	});
+});
