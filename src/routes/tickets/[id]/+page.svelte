@@ -8,6 +8,8 @@
 	} from '$lib/modules/tickets/ticket.constants';
 	import { allowedTransitions } from '$lib/modules/tickets/ticket.transitions';
 	import { resolve } from '$app/paths';
+	import { checkStatusChange } from '$lib/modules/tickets/ticket.guard';
+	import type { TicketResolution } from '$lib/modules/tickets/ticket.types';
 
 	let { data, form }: PageProps = $props();
 
@@ -22,6 +24,22 @@
 
 	const resolutionOptions = $derived(
 		selectedStatus === 'resolved' ? resolvingResolutions : closingResolutions
+	);
+
+	let selectedResolution = $state<TicketResolution | ''>('');
+	let resolutionSummary = $state('');
+
+	const guard = $derived(
+		selectedStatus === data.ticket.status
+			? null
+			: checkStatusChange(
+					{ status: data.ticket.status, reopenCount: data.ticket.reopenCount },
+					{
+						to: selectedStatus,
+						resolution: selectedResolution || undefined,
+						resolutionSummary
+					}
+				)
 	);
 </script>
 
@@ -55,8 +73,7 @@
 		<input id="reason" name="reason" maxlength="500" />
 		{#if needsResolution}
 			<label for="resolution">Resolution</label>
-
-			<select id="resolution" name="resolution" required>
+			<select id="resolution" name="resolution" required bind:value={selectedResolution}>
 				<option value="">Please choose</option>
 				{#each resolutionOptions as resolution (resolution)}
 					<option value={resolution}>{ticketResolutionLabels[resolution]}</option>
@@ -71,10 +88,22 @@
 				id="resolutionSummary"
 				name="resolutionSummary"
 				maxlength="2000"
-				required={selectedStatus === 'resolved'}></textarea>
+				required={selectedStatus === 'resolved'}
+				bind:value={resolutionSummary}></textarea>
 		{/if}
 
-		<button type="submit">Save status</button>
+		{#if guard}
+			{#each guard.blockers as blocker (blocker.code)}
+				<p role="alert">{blocker.message}</p>
+			{/each}
+
+			{#each guard.warnings as warning (warning.code)}
+				<p role="status">Warning: {warning.message}</p>
+			{/each}
+		{/if}
+
+		<button type="submit" disabled={guard !== null && guard.blockers.length > 0}>Save status</button
+		>
 	</form>
 {:else}
 	<p>Closed tickets cannot be changed.</p>
