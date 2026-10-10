@@ -9,6 +9,7 @@ An ADR records one significant design decision: the context, the decision and it
 | [0003](0003-background-jobs-and-worker.md) | Background jobs and worker         | Accepted |
 | [0004](0004-logging-and-configuration.md)  | Logging and configuration          | Accepted |
 | [0005](0005-ticket-notes.md)               | Ticket notes and non-email contact | Accepted |
+| [0006](0006-next-step-due-targets.md)      | Next-step due targets              | Accepted |
 
 ## Template
 
