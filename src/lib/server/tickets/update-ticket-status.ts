@@ -7,18 +7,27 @@ import type { Actor } from '../../modules/tickets/ticket.types';
 import { tickets } from '../db/schema/tickets';
 import { ticketStatusHistory } from '../db/schema/ticket-status-history';
 import { checkStatusChange } from '../../modules/tickets/ticket.guard';
+import type { GuardBlockerCode } from '../../modules/tickets/ticket.guard';
+import { defaultNextStepDue, defaultNextSteps } from '../../modules/tickets/ticket.due';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
-
-type UpdateTicketStatusResult =
-	'updated' | 'unchanged' | 'conflict' | 'invalid_transition' | 'resolution_required';
+type UpdateTicketStatusResult = 'updated' | 'unchanged' | 'conflict' | GuardBlockerCode;
 
 export async function updateTicketStatus(
 	database: NodePgDatabase,
 	input: UpdateTicketStatusInput,
 	actor: Actor
 ): Promise<UpdateTicketStatusResult> {
-	const { ticketId, status, expectedVersion, resolution, resolutionSummary, reason } = input;
+	const {
+		ticketId,
+		status,
+		expectedVersion,
+		resolution,
+		resolutionSummary,
+		reason,
+		nextStep,
+		nextStepDue
+	} = input;
 
 	return database.transaction(async (tx): Promise<UpdateTicketStatusResult> => {
 		const [currentTicket] = await tx
@@ -28,7 +37,8 @@ export async function updateTicketStatus(
 				firstResolvedAt: tickets.firstResolvedAt,
 				reopenCount: tickets.reopenCount,
 				resolution: tickets.resolution,
-				resolutionSummary: tickets.resolutionSummary
+				resolutionSummary: tickets.resolutionSummary,
+				priority: tickets.priority
 			})
 			.from(tickets)
 			.where(eq(tickets.id, ticketId))
@@ -43,9 +53,12 @@ export async function updateTicketStatus(
 			return 'unchanged';
 		}
 
+		const now = new Date();
+
 		const guard = checkStatusChange(
 			{ status: currentTicket.status, reopenCount: currentTicket.reopenCount },
-			{ to: status, resolution, resolutionSummary }
+			{ to: status, resolution, resolutionSummary, nextStep, nextStepDue },
+			now
 		);
 
 		const [blocker] = guard.blockers;
@@ -70,7 +83,13 @@ export async function updateTicketStatus(
 				? resolutionSummary || null
 				: null;
 
-		const now = new Date();
+		const isOpen = status !== 'closed';
+
+		const nextStepValue = isOpen ? nextStep || defaultNextSteps[status] : null;
+
+		const nextStepDueValue = isOpen
+			? (nextStepDue ?? defaultNextStepDue(status, currentTicket.priority, now))
+			: null;
 
 		const isReopen = currentTicket.status === 'resolved' && status === 'in_progress';
 
@@ -89,7 +108,9 @@ export async function updateTicketStatus(
 						: currentTicket.firstResolvedAt,
 				reopenCount: isReopen ? currentTicket.reopenCount + 1 : currentTicket.reopenCount,
 				resolution: nextResolution,
-				resolutionSummary: nextResolutionSummary
+				resolutionSummary: nextResolutionSummary,
+				nextStep: nextStepValue,
+				nextStepDue: nextStepDueValue
 			})
 			.where(eq(tickets.id, ticketId));
 

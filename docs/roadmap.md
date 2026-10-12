@@ -23,7 +23,7 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 - [x] 1.2 Resolution field and summary, `first_resolved_at`, `reopen_count`, extended constraints
 - [x] 1.3 History with actor type, actor and reason; foreign key `restrict`
 - [x] 1.4 Guard function returning blockers and warnings
-- [ ] 1.5 Next step and due date with per-status defaults and the database invariant
+- [x] 1.5 Next step and due date with per-status defaults and the database invariant
 - [ ] 1.6 Attention columns with manual clear
 - [ ] 1.7 UI: status, next steps, blockers, attention badge, overdue filter
 
@@ -112,3 +112,5 @@ Done when: actions per ticket are below the Phase 2 baseline.
 - Upgrade to SvelteKit 3 (adapter-node is pinned to 5.x until then)
 - Log retention and access before production use
 - Optional `db:test:up` script to start and migrate the test database
+- Recalculate the due date when a ticket's priority changes (once priority can be edited)
+- Edit the next step without changing the status

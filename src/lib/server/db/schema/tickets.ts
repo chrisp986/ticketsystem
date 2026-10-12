@@ -79,6 +79,13 @@ export const tickets = pgTable(
 
 		reopenCount: integer('reopen_count').default(0).notNull(),
 
+		nextStep: text('next_step'),
+
+		nextStepDue: timestamp('next_step_due', {
+			withTimezone: true,
+			mode: 'date'
+		}).defaultNow(),
+
 		updatedAt: timestamp('updated_at', {
 			withTimezone: true,
 			mode: 'date'
@@ -125,6 +132,10 @@ export const tickets = pgTable(
 		check(
 			'tickets_closed_unresolved_not_solved',
 			sql`${table.status} <> 'closed' OR ${table.resolvedAt} IS NOT NULL OR ${table.resolution} NOT IN ('solved', 'workaround')`
+		),
+		check(
+			'tickets_open_has_next_step_due',
+			sql`${table.status} = 'closed' OR ${table.nextStepDue} IS NOT NULL`
 		)
 	]
 );

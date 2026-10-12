@@ -10,6 +10,8 @@
 	import { resolve } from '$app/paths';
 	import { checkStatusChange } from '$lib/modules/tickets/ticket.guard';
 	import type { TicketResolution } from '$lib/modules/tickets/ticket.types';
+	import { defaultNextStepDue, defaultNextSteps } from '$lib/modules/tickets/ticket.due';
+	import { fromLocalInputValue, toLocalInputValue } from '$lib/modules/time/local-datetime';
 
 	let { data, form }: PageProps = $props();
 
@@ -29,6 +31,13 @@
 	let selectedResolution = $state<TicketResolution | ''>('');
 	let resolutionSummary = $state('');
 
+	let nextStep = $derived(defaultNextSteps[selectedStatus] ?? '');
+
+	let nextStepDue = $derived.by(() => {
+		const due = defaultNextStepDue(selectedStatus, data.ticket.priority, new Date());
+		return due ? toLocalInputValue(due) : '';
+	});
+
 	const guard = $derived(
 		selectedStatus === data.ticket.status
 			? null
@@ -37,7 +46,9 @@
 					{
 						to: selectedStatus,
 						resolution: selectedResolution || undefined,
-						resolutionSummary
+						resolutionSummary,
+						nextStep,
+						nextStepDue: fromLocalInputValue(nextStepDue) ?? undefined
 					}
 				)
 	);
@@ -49,6 +60,14 @@
 
 <p>Ticket Nr.: {data.ticket.ticketNumber}</p>
 <p>Status: {ticketStatusLabels[data.ticket.status]}</p>
+
+{#if data.ticket.nextStepDue}
+	<p>
+		Next step: {data.ticket.nextStep ?? '—'}, due {toLocalInputValue(
+			data.ticket.nextStepDue
+		).replace('T', ' ')}
+	</p>
+{/if}
 
 {#if data.ticket.resolution}
 	<p>Resolution: {ticketResolutionLabels[data.ticket.resolution]}</p>
@@ -68,6 +87,14 @@
 				<option value={status}>{ticketStatusLabels[status]}</option>
 			{/each}
 		</select>
+
+		{#if selectedStatus !== data.ticket.status && selectedStatus !== 'closed'}
+			<label for="nextStep">Next step</label>
+			<input id="nextStep" name="nextStep" maxlength="500" bind:value={nextStep} />
+
+			<label for="nextStepDue">Due (Berlin time)</label>
+			<input id="nextStepDue" name="nextStepDue" type="datetime-local" bind:value={nextStepDue} />
+		{/if}
 
 		<label for="reason">Reason (optional)</label>
 		<input id="reason" name="reason" maxlength="500" />

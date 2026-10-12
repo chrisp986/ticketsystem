@@ -10,6 +10,7 @@ import { ticketStatusHistory } from '$lib/server/db/schema/ticket-status-history
 import { updateTicketStatus } from '$lib/server/tickets/update-ticket-status';
 import type { Actions, PageServerLoad } from './$types';
 import { updateTicketStatusSchema } from '$lib/modules/tickets/ticket.validation';
+import { fromLocalInputValue } from '$lib/modules/time/local-datetime';
 
 const ticketIdSchema = z.uuid();
 
@@ -46,6 +47,15 @@ export const actions = {
 		const resolutionValue = formData.get('resolution');
 		const summaryValue = formData.get('resolutionSummary');
 		const reasonValue = formData.get('reason');
+		const nextStepValue = formData.get('nextStep');
+		const dueValue = formData.get('nextStepDue');
+
+		const nextStepDue =
+			typeof dueValue === 'string' && dueValue !== '' ? fromLocalInputValue(dueValue) : undefined;
+
+		if (nextStepDue === null) {
+			return fail(400, { message: 'Please enter a valid due date.' });
+		}
 
 		const result = updateTicketStatusSchema.safeParse({
 			ticketId: params.id,
@@ -54,7 +64,9 @@ export const actions = {
 			resolution:
 				typeof resolutionValue === 'string' && resolutionValue !== '' ? resolutionValue : undefined,
 			resolutionSummary: typeof summaryValue === 'string' ? summaryValue : undefined,
-			reason: typeof reasonValue === 'string' ? reasonValue : undefined
+			reason: typeof reasonValue === 'string' ? reasonValue : undefined,
+			nextStep: typeof nextStepValue === 'string' ? nextStepValue : undefined,
+			nextStepDue
 		});
 
 		if (!result.success) {
@@ -85,6 +97,14 @@ export const actions = {
 					message:
 						'Resolving needs a resolution and a summary. Closing an unresolved ticket needs a reason.'
 				});
+			}
+
+			if (outcome === 'next_step_required') {
+				return fail(422, { message: 'Describe the next step.' });
+			}
+
+			if (outcome === 'next_step_due_in_past') {
+				return fail(422, { message: 'The due date is in the past.' });
 			}
 
 			return { message: 'Status updated.' };

@@ -2,7 +2,8 @@ import { isResolutionValid } from './ticket.resolution';
 import { canTransition } from './ticket.transitions';
 import type { TicketResolution, TicketStatus } from './ticket.types';
 
-export type GuardBlockerCode = 'invalid_transition' | 'resolution_required';
+export type GuardBlockerCode =
+	'invalid_transition' | 'resolution_required' | 'next_step_required' | 'next_step_due_in_past';
 
 export type GuardWarningCode = 'closing_without_summary' | 'repeated_reopen';
 
@@ -25,7 +26,14 @@ export type GuardChange = {
 	to: TicketStatus;
 	resolution?: TicketResolution;
 	resolutionSummary?: string;
+	nextStep?: string;
+	nextStepDue?: Date;
 };
+
+/**
+ * Statuses whose next step only the agent can describe (ADR 0002).
+ */
+const needsNextStepText: readonly TicketStatus[] = ['in_progress', 'waiting_internal'];
 
 /**
  * Checks a status change against the lifecycle rules (ADR 0001).
@@ -33,7 +41,11 @@ export type GuardChange = {
  * Blockers stop the change. Warnings allow it, but the agent should know.
  * Used by the ticket view for live feedback and by the server on submit.
  */
-export function checkStatusChange(ticket: GuardTicket, change: GuardChange): GuardResult {
+export function checkStatusChange(
+	ticket: GuardTicket,
+	change: GuardChange,
+	now: Date = new Date()
+): GuardResult {
 	const result: GuardResult = { blockers: [], warnings: [] };
 	const { to, resolution, resolutionSummary } = change;
 
@@ -55,6 +67,20 @@ export function checkStatusChange(ticket: GuardTicket, change: GuardChange): Gua
 				to === 'resolved'
 					? 'Choose Solved or Workaround and write a summary.'
 					: 'Choose a reason for closing.'
+		});
+	}
+
+	if (needsNextStepText.includes(to) && !change.nextStep?.trim()) {
+		result.blockers.push({
+			code: 'next_step_required',
+			message: 'Describe the next step.'
+		});
+	}
+
+	if (to !== 'closed' && change.nextStepDue && change.nextStepDue.getTime() < now.getTime()) {
+		result.blockers.push({
+			code: 'next_step_due_in_past',
+			message: 'The due date is in the past.'
 		});
 	}
 

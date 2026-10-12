@@ -317,7 +317,8 @@ test('reopening a resolved ticket clears its resolution timestamp', async () => 
 			{
 				ticketId: created.id,
 				status: 'in_progress',
-				expectedVersion: created.version
+				expectedVersion: created.version,
+				nextStep: 'Continue work.'
 			},
 			user
 		);
@@ -377,7 +378,8 @@ test('reopening counts the reopen and keeps the first resolution time', async ()
 					status,
 					resolution: 'solved',
 					resolutionSummary: 'Fixed in the test.',
-					expectedVersion: version
+					expectedVersion: version,
+					nextStep: 'Continue work.'
 				},
 				user
 			);
@@ -553,7 +555,8 @@ test('reopening keeps the previous resolution in the history', async () => {
 				ticketId: created.id,
 				status: 'in_progress',
 				reason: 'Fault came back.',
-				expectedVersion: created.version + 1
+				expectedVersion: created.version + 1,
+				nextStep: 'Continue work.'
 			},
 			user
 		);
@@ -599,7 +602,12 @@ test('a ticket with history cannot be deleted', async () => {
 	try {
 		await updateTicketStatus(
 			testDb,
-			{ ticketId: created.id, status: 'in_progress', expectedVersion: created.version },
+			{
+				ticketId: created.id,
+				status: 'in_progress',
+				expectedVersion: created.version,
+				nextStep: 'Continue work.'
+			},
 			user
 		);
 
@@ -608,6 +616,139 @@ test('a ticket with history cannot be deleted', async () => {
 		).rejects.toMatchObject({
 			cause: { code: '23001', constraint: 'ticket_status_history_ticket_id_tickets_id_fk' }
 		});
+	} finally {
+		await deleteTestTicket(created.id);
+	}
+});
+
+test('waiting_customer without a due date gets the default', async () => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({ subject: 'Integration test: default due date', status: 'in_progress' })
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const before = new Date();
+
+		const outcome = await updateTicketStatus(
+			testDb,
+			{ ticketId: created.id, status: 'waiting_customer', expectedVersion: created.version },
+			user
+		);
+
+		expect(outcome).toBe('updated');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored?.nextStep).toBe('Follow up if the customer has not replied');
+		expect(stored?.nextStepDue?.getTime()).toBeGreaterThan(before.getTime());
+	} finally {
+		await deleteTestTicket(created.id);
+	}
+});
+
+test('an explicit due date is stored', async () => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({ subject: 'Integration test: explicit due date', status: 'in_progress' })
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+		const outcome = await updateTicketStatus(
+			testDb,
+			{
+				ticketId: created.id,
+				status: 'waiting_internal',
+				nextStep: 'Wait for the spare part.',
+				nextStepDue: tomorrow,
+				expectedVersion: created.version
+			},
+			user
+		);
+
+		expect(outcome).toBe('updated');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored?.nextStep).toBe('Wait for the spare part.');
+		expect(stored?.nextStepDue).toEqual(tomorrow);
+	} finally {
+		await deleteTestTicket(created.id);
+	}
+});
+
+test('closing clears the next step', async () => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({
+			subject: 'Integration test: close clears next step',
+			status: 'in_progress',
+			nextStep: 'Check the logs.'
+		})
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const outcome = await updateTicketStatus(
+			testDb,
+			{
+				ticketId: created.id,
+				status: 'closed',
+				resolution: 'duplicate',
+				expectedVersion: created.version
+			},
+			user
+		);
+
+		expect(outcome).toBe('updated');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toMatchObject({
+			status: 'closed',
+			nextStep: null,
+			nextStepDue: null
+		});
+	} finally {
+		await deleteTestTicket(created.id);
+	}
+});
+
+test('in_progress without a next step is rejected', async () => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({ subject: 'Integration test: next step required', status: 'new' })
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const outcome = await updateTicketStatus(
+			testDb,
+			{ ticketId: created.id, status: 'in_progress', expectedVersion: created.version },
+			user
+		);
+
+		expect(outcome).toBe('next_step_required');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toEqual(created);
 	} finally {
 		await deleteTestTicket(created.id);
 	}
