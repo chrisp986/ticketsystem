@@ -6,7 +6,8 @@ import {
 	ticketPriorities,
 	ticketSources,
 	ticketStatuses,
-	ticketResolutions
+	ticketResolutions,
+	attentionReasons
 } from '$lib/modules/tickets/ticket.constants';
 
 /**
@@ -22,6 +23,8 @@ export const ticketPriority = pgEnum('ticket_priority', ticketPriorities);
 export const ticketSource = pgEnum('ticket_source', ticketSources);
 
 export const ticketResolution = pgEnum('ticket_resolution', ticketResolutions);
+
+export const attentionReason = pgEnum('attention_reason', attentionReasons);
 
 /**
  * Tickets table.
@@ -86,6 +89,13 @@ export const tickets = pgTable(
 			mode: 'date'
 		}).defaultNow(),
 
+		attentionSince: timestamp('attention_since', {
+			withTimezone: true,
+			mode: 'date'
+		}),
+
+		attentionReason: attentionReason('attention_reason'),
+
 		updatedAt: timestamp('updated_at', {
 			withTimezone: true,
 			mode: 'date'
@@ -136,6 +146,14 @@ export const tickets = pgTable(
 		check(
 			'tickets_open_has_next_step_due',
 			sql`${table.status} = 'closed' OR ${table.nextStepDue} IS NOT NULL`
+		),
+		check(
+			'tickets_attention_fields_together',
+			sql`(${table.attentionSince} IS NULL) = (${table.attentionReason} IS NULL)`
+		),
+		check(
+			'tickets_attention_only_when_open',
+			sql`${table.status} <> 'closed' OR ${table.attentionSince} IS NULL`
 		)
 	]
 );
