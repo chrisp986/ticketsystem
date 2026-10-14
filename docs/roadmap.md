@@ -24,7 +24,7 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 - [x] 1.3 History with actor type, actor and reason; foreign key `restrict`
 - [x] 1.4 Guard function returning blockers and warnings
 - [x] 1.5 Next step and due date with per-status defaults and the database invariant
-- [ ] 1.6 Attention columns with manual clear
+- [x] 1.6 Attention columns with manual clear
 - [ ] 1.7 UI: status, next steps, blockers, attention badge, overdue filter
 
 ## Phase 2: Users and ownership ([ADR 0005](adr/0005-ticket-notes.md))
