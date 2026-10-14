@@ -81,3 +81,11 @@ export const updateTicketStatusSchema = z.object({
 	nextStep: z.string().trim().max(500).optional(),
 	nextStepDue: z.date().optional()
 });
+
+/**
+ * Input for marking a ticket's attention as handled.
+ */
+export const markAttentionHandledSchema = z.object({
+	ticketId: z.uuid(),
+	expectedVersion: z.number().int().positive()
+});

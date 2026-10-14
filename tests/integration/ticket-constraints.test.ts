@@ -183,3 +183,32 @@ test('rejects an open ticket without a next-step due date', async () => {
 		cause: { code: '23514', constraint: 'tickets_open_has_next_step_due' }
 	});
 });
+
+test('rejects attention without a reason', async () => {
+	await expect(
+		testDb
+			.insert(tickets)
+			.values({ subject: 'Constraint test: attention without reason', attentionSince: someTime })
+			.execute()
+	).rejects.toMatchObject({
+		cause: { code: '23514', constraint: 'tickets_attention_fields_together' }
+	});
+});
+
+test('rejects attention on a closed ticket', async () => {
+	await expect(
+		testDb
+			.insert(tickets)
+			.values({
+				subject: 'Constraint test: closed with attention',
+				status: 'closed',
+				closedAt: someTime,
+				resolution: 'duplicate',
+				attentionSince: someTime,
+				attentionReason: 'new_ticket'
+			})
+			.execute()
+	).rejects.toMatchObject({
+		cause: { code: '23514', constraint: 'tickets_attention_only_when_open' }
+	});
+});

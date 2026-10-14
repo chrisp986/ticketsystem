@@ -57,6 +57,31 @@ export const ticketResolutionLabels = {
 } satisfies Record<(typeof ticketResolutions)[number], string>;
 
 /**
+ * Why a ticket needs a human now (ADR 0002).
+ */
+export const attentionReasons = [
+	'new_ticket',
+	'customer_reply',
+	'reopened',
+	'bounce',
+	'next_step_overdue'
+] as const;
+
+export const attentionReasonLabels = {
+	new_ticket: 'New ticket',
+	customer_reply: 'Customer replied',
+	reopened: 'Reopened',
+	bounce: 'Email bounced',
+	next_step_overdue: 'Next step overdue'
+} satisfies Record<(typeof attentionReasons)[number], string>;
+
+export const attentionEventTypes = ['raised', 'cleared'] as const;
+
+/**
+ * How attention was cleared (ADR 0002).
+ */
+export const attentionClearTypes = ['reply', 'status_change', 'manual'] as const;
+/**
  * Ticket priorities.
  */
 export const ticketPriorities = ['low', 'medium', 'high', 'critical'] as const;

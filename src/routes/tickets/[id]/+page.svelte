@@ -4,7 +4,8 @@
 		closingResolutions,
 		resolvingResolutions,
 		ticketResolutionLabels,
-		ticketStatusLabels
+		ticketStatusLabels,
+		attentionReasonLabels
 	} from '$lib/modules/tickets/ticket.constants';
 	import { allowedTransitions } from '$lib/modules/tickets/ticket.transitions';
 	import { resolve } from '$app/paths';
@@ -67,6 +68,22 @@
 			data.ticket.nextStepDue
 		).replace('T', ' ')}
 	</p>
+{/if}
+
+{#if data.ticket.attentionSince && data.ticket.attentionReason}
+	<section aria-labelledby="attention-heading">
+		<h2 id="attention-heading">Needs attention</h2>
+
+		<p>
+			{attentionReasonLabels[data.ticket.attentionReason]} since
+			{toLocalInputValue(data.ticket.attentionSince).replace('T', ' ')}
+		</p>
+
+		<form method="POST" action="?/markHandled">
+			<input type="hidden" name="expectedVersion" value={data.ticket.version} />
+			<button type="submit">Mark as handled</button>
+		</form>
+	</section>
 {/if}
 
 {#if data.ticket.resolution}
