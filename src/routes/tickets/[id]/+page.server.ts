@@ -9,7 +9,11 @@ import { desc, eq } from 'drizzle-orm';
 import { ticketStatusHistory } from '$lib/server/db/schema/ticket-status-history';
 import { updateTicketStatus } from '$lib/server/tickets/update-ticket-status';
 import type { Actions, PageServerLoad } from './$types';
-import { updateTicketStatusSchema } from '$lib/modules/tickets/ticket.validation';
+import {
+	updateTicketStatusSchema,
+	markAttentionHandledSchema
+} from '$lib/modules/tickets/ticket.validation';
+import { markAttentionHandled } from '$lib/server/tickets/mark-attention-handled';
 import { fromLocalInputValue } from '$lib/modules/time/local-datetime';
 
 const ticketIdSchema = z.uuid();
@@ -118,6 +122,44 @@ export const actions = {
 			return fail(500, {
 				message: 'The status could not be saved. Please try again.'
 			});
+		}
+	},
+
+	markHandled: async ({ request, params, locals }) => {
+		const formData = await request.formData();
+		const versionValue = formData.get('expectedVersion');
+
+		const result = markAttentionHandledSchema.safeParse({
+			ticketId: params.id,
+			expectedVersion: typeof versionValue === 'string' ? Number(versionValue) : undefined
+		});
+
+		if (!result.success) {
+			return fail(400, { message: 'Please reload the ticket and try again.' });
+		}
+
+		try {
+			const outcome = await markAttentionHandled(db, result.data, { type: 'user' });
+
+			if (outcome === 'conflict') {
+				return fail(409, {
+					message: 'The ticket changed or no longer exists. Reload before trying again.'
+				});
+			}
+
+			if (outcome === 'unchanged') {
+				return { message: 'Nothing needed attention.' };
+			}
+
+			return { message: 'Marked as handled.' };
+		} catch (err) {
+			logger.error('failed to mark attention as handled', {
+				requestId: locals.requestId,
+				ticketId: params.id,
+				err
+			});
+
+			return fail(500, { message: 'Could not mark as handled. Please try again.' });
 		}
 	}
 } satisfies Actions;
