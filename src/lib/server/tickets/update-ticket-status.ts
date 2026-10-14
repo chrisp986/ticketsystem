@@ -9,6 +9,7 @@ import { ticketStatusHistory } from '../db/schema/ticket-status-history';
 import { checkStatusChange } from '../../modules/tickets/ticket.guard';
 import type { GuardBlockerCode } from '../../modules/tickets/ticket.guard';
 import { defaultNextStepDue, defaultNextSteps } from '../../modules/tickets/ticket.due';
+import { ticketAttentionEvents } from '../db/schema/ticket-attention-events';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 type UpdateTicketStatusResult = 'updated' | 'unchanged' | 'conflict' | GuardBlockerCode;
@@ -38,7 +39,9 @@ export async function updateTicketStatus(
 				reopenCount: tickets.reopenCount,
 				resolution: tickets.resolution,
 				resolutionSummary: tickets.resolutionSummary,
-				priority: tickets.priority
+				priority: tickets.priority,
+				attentionSince: tickets.attentionSince,
+				attentionReason: tickets.attentionReason
 			})
 			.from(tickets)
 			.where(eq(tickets.id, ticketId))
@@ -92,6 +95,8 @@ export async function updateTicketStatus(
 			: null;
 
 		const isReopen = currentTicket.status === 'resolved' && status === 'in_progress';
+		const clearsAttention =
+			currentTicket.attentionReason !== null && (actor.type === 'user' || !isOpen);
 
 		await tx
 			.update(tickets)
@@ -110,10 +115,10 @@ export async function updateTicketStatus(
 				resolution: nextResolution,
 				resolutionSummary: nextResolutionSummary,
 				nextStep: nextStepValue,
-				nextStepDue: nextStepDueValue
+				nextStepDue: nextStepDueValue,
+				...(clearsAttention ? { attentionSince: null, attentionReason: null } : {})
 			})
 			.where(eq(tickets.id, ticketId));
-
 		await tx.insert(ticketStatusHistory).values({
 			ticketId,
 			previousStatus: currentTicket.status,
@@ -125,6 +130,18 @@ export async function updateTicketStatus(
 			resolution: nextResolution,
 			resolutionSummary: nextResolutionSummary
 		});
+
+		if (clearsAttention && currentTicket.attentionReason) {
+			await tx.insert(ticketAttentionEvents).values({
+				ticketId,
+				eventType: 'cleared',
+				reason: currentTicket.attentionReason,
+				clearType: 'status_change',
+				actorType: actor.type,
+				actorId: actor.id ?? null,
+				occurredAt: now
+			});
+		}
 
 		return 'updated';
 	});

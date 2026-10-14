@@ -6,6 +6,7 @@ import { updateTicketStatus } from '../../src/lib/server/tickets/update-ticket-s
 import { ticketStatusHistory } from '../../src/lib/server/db/schema/ticket-status-history';
 import type { Actor } from '../../src/lib/modules/tickets/ticket.types';
 import { deleteTestTicket, testDb, testPool } from './helpers/db';
+import { ticketAttentionEvents } from '../../src/lib/server/db/schema/ticket-attention-events';
 
 const user: Actor = { type: 'user' };
 
@@ -749,6 +750,50 @@ test('in_progress without a next step is rejected', async () => {
 		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
 
 		expect(stored).toEqual(created);
+	} finally {
+		await deleteTestTicket(created.id);
+	}
+});
+
+test('a status change by an agent clears attention', async () => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({
+			subject: 'Integration test: status change clears attention',
+			status: 'new',
+			attentionSince: new Date(),
+			attentionReason: 'new_ticket'
+		})
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const outcome = await updateTicketStatus(
+			testDb,
+			{ ticketId: created.id, status: 'waiting_customer', expectedVersion: created.version },
+			user
+		);
+
+		expect(outcome).toBe('updated');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toMatchObject({ attentionSince: null, attentionReason: null });
+
+		const events = await testDb
+			.select()
+			.from(ticketAttentionEvents)
+			.where(eq(ticketAttentionEvents.ticketId, created.id));
+
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({
+			eventType: 'cleared',
+			reason: 'new_ticket',
+			clearType: 'status_change'
+		});
 	} finally {
 		await deleteTestTicket(created.id);
 	}

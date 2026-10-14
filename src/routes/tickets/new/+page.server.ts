@@ -32,7 +32,7 @@ export const actions = {
 		}
 
 		try {
-			await createTicket(db, result.data);
+			await createTicket(db, result.data, { type: 'user' });
 		} catch (err) {
 			logger.error('failed to create ticket', { requestId: locals.requestId, err });
 			return fail(500, {
