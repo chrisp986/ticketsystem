@@ -11,8 +11,12 @@
 	import { resolve } from '$app/paths';
 	import { checkStatusChange } from '$lib/modules/tickets/ticket.guard';
 	import type { TicketResolution } from '$lib/modules/tickets/ticket.types';
-	import { defaultNextStepDue, defaultNextSteps } from '$lib/modules/tickets/ticket.due';
-	import { fromLocalInputValue, toLocalInputValue } from '$lib/modules/time/local-datetime';
+	import { defaultNextStepDue, defaultNextSteps, isOverdue } from '$lib/modules/tickets/ticket.due';
+	import {
+		formatLocalDateTime,
+		fromLocalInputValue,
+		toLocalInputValue
+	} from '$lib/modules/time/local-datetime';
 
 	let { data, form }: PageProps = $props();
 
@@ -64,9 +68,10 @@
 
 {#if data.ticket.nextStepDue}
 	<p>
-		Next step: {data.ticket.nextStep ?? '—'}, due {toLocalInputValue(
-			data.ticket.nextStepDue
-		).replace('T', ' ')}
+		Next step: {data.ticket.nextStep ?? '—'}, due {formatLocalDateTime(data.ticket.nextStepDue)}
+		{#if isOverdue(data.ticket)}
+			<strong>Overdue</strong>
+		{/if}
 	</p>
 {/if}
 
@@ -76,7 +81,7 @@
 
 		<p>
 			{attentionReasonLabels[data.ticket.attentionReason]} since
-			{toLocalInputValue(data.ticket.attentionSince).replace('T', ' ')}
+			{formatLocalDateTime(data.ticket.attentionSince)}
 		</p>
 
 		<form method="POST" action="?/markHandled">

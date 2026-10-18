@@ -1,14 +1,29 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
-	import { ticketStatuses, ticketStatusLabels } from '$lib/modules/tickets/ticket.constants';
 
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
+	import {
+		attentionReasonLabels,
+		ticketStatuses,
+		ticketStatusLabels,
+		ticketViewLabels,
+		ticketViews
+	} from '$lib/modules/tickets/ticket.constants';
+	import { isOverdue } from '$lib/modules/tickets/ticket.due';
+	import { formatLocalDateTime } from '$lib/modules/time/local-datetime';
+
 	let { data }: PageProps = $props();
+
+	const now = new Date();
 
 	function pageUrl(page: number): `?${string}` {
 		const params = new SvelteURLSearchParams();
+
+		if (data.view !== 'all') {
+			params.set('view', data.view);
+		}
 
 		params.set('page', String(page));
 
@@ -54,6 +69,13 @@
 		{/each}
 	</select>
 
+	<label for="view-filter">Show</label>
+	<select id="view-filter" name="view">
+		{#each ticketViews as view (view)}
+			<option value={view} selected={data.view === view}>{ticketViewLabels[view]}</option>
+		{/each}
+	</select>
+
 	<button type="submit">Search and filter</button>
 	<a href={resolve('/')}>Clear search and filters</a>
 </form>
@@ -65,13 +87,23 @@
 				{ticket.subject || '(No subject)'}
 			</a>
 		</h2>
-		<p>Created: {ticket.createdAt}</p>
+
+		{#if ticket.attentionReason}
+			<p><strong>Needs attention:</strong> {attentionReasonLabels[ticket.attentionReason]}</p>
+		{/if}
 
 		<p>Status: {ticketStatusLabels[ticket.status]} · Priority: {ticket.priority}</p>
 
-		{#if ticket.description}
-			<p>{ticket.description}</p>
+		{#if ticket.nextStepDue}
+			<p>
+				Next step: {ticket.nextStep ?? '—'} · due {formatLocalDateTime(ticket.nextStepDue)}
+				{#if isOverdue(ticket, now)}
+					<strong>Overdue</strong>
+				{/if}
+			</p>
 		{/if}
+
+		<p>Created: {formatLocalDateTime(ticket.createdAt)}</p>
 	</article>
 {:else}
 	{#if data.page > 1}
@@ -79,7 +111,7 @@
 		<a href={resolve(`/${pageUrl(1)}`)}>Go to the first page</a>
 	{:else}
 		<p>
-			{data.selectedStatus || data.searchTerm
+			{data.selectedStatus || data.searchTerm || data.view !== 'all'
 				? 'No tickets match your search and filters.'
 				: 'No tickets yet.'}
 		</p>

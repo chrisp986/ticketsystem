@@ -10,6 +10,18 @@
  */
 
 /**
+ * Views of the ticket list.
+ */
+export const ticketViews = ['all', 'action', 'attention', 'overdue'] as const;
+
+export const ticketViewLabels = {
+	all: 'All tickets',
+	action: 'Needs action',
+	attention: 'Needs attention',
+	overdue: 'Overdue'
+} satisfies Record<(typeof ticketViews)[number], string>;
+
+/**
  * Ticket lifecycle statuses.
  */
 export const ticketStatuses = [

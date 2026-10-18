@@ -8,7 +8,8 @@ import {
 	ticketStatuses,
 	attentionReasons,
 	attentionEventTypes,
-	attentionClearTypes
+	attentionClearTypes,
+	ticketViews
 } from './ticket.constants';
 
 import type {
@@ -36,6 +37,8 @@ export type AttentionReason = (typeof attentionReasons)[number];
 export type AttentionEventType = (typeof attentionEventTypes)[number];
 
 export type AttentionClearType = (typeof attentionClearTypes)[number];
+
+export type TicketView = (typeof ticketViews)[number];
 
 /**
  * Complete ticket.

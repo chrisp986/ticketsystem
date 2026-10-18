@@ -53,3 +53,11 @@ export function defaultNextStepDue(
 
 	return addBusinessMinutes(now, minutes);
 }
+
+/**
+ * A ticket is overdue when its next step is due before now.
+ * Closed tickets have no due date and are never overdue.
+ */
+export function isOverdue(ticket: { nextStepDue: Date | null }, now: Date = new Date()): boolean {
+	return ticket.nextStepDue !== null && ticket.nextStepDue.getTime() < now.getTime();
+}

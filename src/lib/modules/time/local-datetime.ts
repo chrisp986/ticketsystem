@@ -35,3 +35,10 @@ export function fromLocalInputValue(value: string): Date | null {
 
 	return new Date(local.getTime());
 }
+
+/**
+ * Formats a moment for display, e.g. "2026-10-12 09:30" (business time zone).
+ */
+export function formatLocalDateTime(date: Date): string {
+	return toLocalInputValue(date).replace('T', ' ');
+}

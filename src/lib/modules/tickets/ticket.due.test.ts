@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { defaultNextStepDue } from './ticket.due';
+import { defaultNextStepDue, isOverdue } from './ticket.due';
 
 const fridayMorning = new Date('2026-10-09T10:00:00+02:00');
 
@@ -19,4 +19,12 @@ test.each([
 
 test('closed tickets have no due date', () => {
 	expect(defaultNextStepDue('closed', 'critical', fridayMorning)).toBeNull();
+});
+
+test('a ticket is overdue only when its due date has passed', () => {
+	const now = new Date('2026-10-12T10:00:00Z');
+
+	expect(isOverdue({ nextStepDue: new Date('2026-10-12T09:59:00Z') }, now)).toBe(true);
+	expect(isOverdue({ nextStepDue: new Date('2026-10-12T10:01:00Z') }, now)).toBe(false);
+	expect(isOverdue({ nextStepDue: null }, now)).toBe(false);
 });
