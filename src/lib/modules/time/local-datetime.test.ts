@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { fromLocalInputValue, toLocalInputValue } from './local-datetime';
+import { fromLocalInputValue, toLocalInputValue, formatLocalDateTime } from './local-datetime';
 
 test('formats a moment as Berlin time', () => {
 	expect(toLocalInputValue(new Date('2026-10-12T07:30:00Z'))).toBe('2026-10-12T09:30');
@@ -13,4 +13,8 @@ test('reads a form value as Berlin time', () => {
 
 test('rejects anything else', () => {
 	expect(fromLocalInputValue('tomorrow')).toBeNull();
+});
+
+test('formats a moment for display', () => {
+	expect(formatLocalDateTime(new Date('2026-10-12T07:30:00Z'))).toBe('2026-10-12 09:30');
 });
