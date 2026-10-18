@@ -1,14 +1,15 @@
 import { error } from '@sveltejs/kit';
-import { and, desc, eq, ilike } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { ticketViews } from '$lib/modules/tickets/ticket.constants';
 import { ticketStatusSchema } from '$lib/modules/tickets/ticket.validation';
 import { db } from '$lib/server/db';
-import { tickets } from '$lib/server/db/schema/tickets';
+import { listTickets } from '$lib/server/tickets/list-tickets';
 import type { PageServerLoad } from './$types';
 
 const PAGE_SIZE = 10;
 const searchSchema = z.string().trim().max(200);
+const viewSchema = z.enum(ticketViews);
 
 const pageSchema = z
 	.string()
@@ -39,34 +40,32 @@ export const load = (async ({ url }) => {
 		error(400, 'Search must be 200 characters or fewer.');
 	}
 
-	const searchTerm = searchResult.data;
+	const viewResult = viewSchema.safeParse(url.searchParams.get('view') || 'all');
 
-	// Treat user-entered backslashes, percent signs, and underscores literally.
-	const escapedSearchTerm = searchTerm.replace(/[\\%_]/g, (character) => `\\${character}`);
+	if (!viewResult.success) {
+		error(400, 'Invalid view.');
+	}
 
 	const selectedStatus = statusResult.data;
+	const searchTerm = searchResult.data;
 	const page = pageResult.data;
-	const offset = (page - 1) * PAGE_SIZE;
+	const view = viewResult.data;
 
-	const ticketRows = await db
-		.select()
-		.from(tickets)
-		.where(
-			and(
-				selectedStatus === undefined ? undefined : eq(tickets.status, selectedStatus),
-				searchTerm === '' ? undefined : ilike(tickets.subject, `%${escapedSearchTerm}%`)
-			)
-		)
-		.orderBy(desc(tickets.createdAt), desc(tickets.id))
-		.limit(PAGE_SIZE + 1)
-		.offset(offset);
+	const result = await listTickets(db, {
+		status: selectedStatus,
+		searchTerm,
+		view,
+		page,
+		pageSize: PAGE_SIZE
+	});
 
 	return {
-		tickets: ticketRows.slice(0, PAGE_SIZE),
+		tickets: result.tickets,
 		selectedStatus: selectedStatus ?? '',
 		searchTerm,
+		view,
 		page,
 		hasPreviousPage: page > 1,
-		hasNextPage: ticketRows.length > PAGE_SIZE
+		hasNextPage: result.hasNextPage
 	};
 }) satisfies PageServerLoad;
