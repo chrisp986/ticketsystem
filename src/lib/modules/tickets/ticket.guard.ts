@@ -1,9 +1,13 @@
 import { isResolutionValid } from './ticket.resolution';
 import { canTransition } from './ticket.transitions';
-import type { TicketResolution, TicketStatus } from './ticket.types';
+import type { TicketResolution, TicketStatus, ActorType } from './ticket.types';
 
 export type GuardBlockerCode =
-	'invalid_transition' | 'resolution_required' | 'next_step_required' | 'next_step_due_in_past';
+	| 'invalid_transition'
+	| 'resolution_required'
+	| 'next_step_required'
+	| 'next_step_due_in_past'
+	| 'human_required';
 
 export type GuardWarningCode = 'closing_without_summary' | 'repeated_reopen';
 
@@ -28,6 +32,7 @@ export type GuardChange = {
 	resolutionSummary?: string;
 	nextStep?: string;
 	nextStepDue?: Date;
+	actorType: ActorType;
 };
 
 /**
@@ -56,6 +61,13 @@ export function checkStatusChange(
 		});
 
 		return result;
+	}
+
+	if (to === 'closed' && change.actorType !== 'user') {
+		result.blockers.push({
+			code: 'human_required',
+			message: 'Only a person can close a ticket.'
+		});
 	}
 
 	const keepsResolution = ticket.status === 'resolved' && to === 'closed';
