@@ -60,7 +60,7 @@ export async function updateTicketStatus(
 
 		const guard = checkStatusChange(
 			{ status: currentTicket.status, reopenCount: currentTicket.reopenCount },
-			{ to: status, resolution, resolutionSummary, nextStep, nextStepDue },
+			{ to: status, resolution, resolutionSummary, nextStep, nextStepDue, actorType: actor.type },
 			now
 		);
 

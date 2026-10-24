@@ -53,7 +53,8 @@
 						resolution: selectedResolution || undefined,
 						resolutionSummary,
 						nextStep,
-						nextStepDue: fromLocalInputValue(nextStepDue) ?? undefined
+						nextStepDue: fromLocalInputValue(nextStepDue) ?? undefined,
+						actorType: 'user'
 					}
 				)
 	);

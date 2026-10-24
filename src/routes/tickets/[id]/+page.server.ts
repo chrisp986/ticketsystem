@@ -111,6 +111,10 @@ export const actions = {
 				return fail(422, { message: 'The due date is in the past.' });
 			}
 
+			if (outcome === 'human_required') {
+				return fail(403, { message: 'Only a person can close a ticket.' });
+			}
+
 			return { message: 'Status updated.' };
 		} catch (err) {
 			logger.error('failed to update ticket status', {
