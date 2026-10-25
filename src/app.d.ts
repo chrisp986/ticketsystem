@@ -13,6 +13,7 @@ declare global {
 		}
 		interface Locals {
 			requestId: string;
+			user: import('$lib/server/auth/session').SessionUser | null;
 		}
 	}
 }

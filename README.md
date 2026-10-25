@@ -8,7 +8,7 @@ The project is also a practical environment for learning TypeScript and full-sta
 
 ## Status
 
-Phase 0 (Foundation) is nearly complete. Working today:
+Phases 0 (Foundation) and 1 (Ticket lifecycle) are complete; Phase 2 (Users and ownership) is in progress. Working today:
 
 - Ticket creation, listing, filtering, search and status changes
 - Optimistic concurrency control and a status history
@@ -18,7 +18,9 @@ Phase 0 (Foundation) is nearly complete. Working today:
 - Health endpoints
 - CI running type checks, lint, unit tests, integration tests and the build
 
-Email, authentication, AI processing and human review are not implemented yet. See the [roadmap](docs/roadmap.md).
+- Sign-in with email and password; every page except `/login` and the health endpoints requires it
+
+Email, AI processing and human review are not implemented yet. See the [roadmap](docs/roadmap.md).
 
 ## Technology
 
@@ -46,8 +48,11 @@ pnpm install
 cp .env.example .env          # then fill in real values
 docker compose up -d          # development database on 127.0.0.1:5432
 pnpm db:migrate
+pnpm user:create --email you@example.com --name "Your Name"   # asks for a password
 pnpm dev                      # http://localhost:5173
 ```
+
+There is no sign-up page. Every account is created with `pnpm user:create`; the password needs at least 12 characters. See [ADR 0007](docs/adr/0007-authentication-and-sessions.md).
 
 ## Configuration
 
@@ -99,6 +104,7 @@ pnpm validate
 | `pnpm db:generate`      | Generate a migration from schema changes     |
 | `pnpm db:migrate`       | Apply migrations to the development database |
 | `pnpm db:test:migrate`  | Apply migrations to the test database        |
+| `pnpm user:create`      | Create a user who can sign in                |
 
 ## Running in production mode
 
@@ -107,7 +113,7 @@ pnpm build
 pnpm start                    # http://localhost:3000
 ```
 
-`adapter-node` reads `PORT` and `HOST`. Behind a reverse proxy, also set `ORIGIN` to the public URL.
+`adapter-node` reads `PORT` and `HOST`. Set `ORIGIN` to the URL the app is opened with (for example `http://192.168.1.10:3000`); without it, `adapter-node` assumes HTTPS and rejects every form submission, including sign-in, as cross-site.
 
 Health endpoints:
 

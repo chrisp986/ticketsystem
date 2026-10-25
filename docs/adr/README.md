@@ -2,14 +2,15 @@
 
 An ADR records one significant design decision: the context, the decision and its consequences. ADRs are not rewritten when a decision changes; a new ADR supersedes the old one.
 
-| ADR                                        | Title                              | Status   |
-| ------------------------------------------ | ---------------------------------- | -------- |
-| [0001](0001-ticket-status-lifecycle.md)    | Ticket status lifecycle            | Accepted |
-| [0002](0002-attention-and-next-step.md)    | Attention flag and next step       | Accepted |
-| [0003](0003-background-jobs-and-worker.md) | Background jobs and worker         | Accepted |
-| [0004](0004-logging-and-configuration.md)  | Logging and configuration          | Accepted |
-| [0005](0005-ticket-notes.md)               | Ticket notes and non-email contact | Accepted |
-| [0006](0006-next-step-due-targets.md)      | Next-step due targets              | Accepted |
+| ADR                                         | Title                              | Status   |
+| ------------------------------------------- | ---------------------------------- | -------- |
+| [0001](0001-ticket-status-lifecycle.md)     | Ticket status lifecycle            | Accepted |
+| [0002](0002-attention-and-next-step.md)     | Attention flag and next step       | Accepted |
+| [0003](0003-background-jobs-and-worker.md)  | Background jobs and worker         | Accepted |
+| [0004](0004-logging-and-configuration.md)   | Logging and configuration          | Accepted |
+| [0005](0005-ticket-notes.md)                | Ticket notes and non-email contact | Accepted |
+| [0006](0006-next-step-due-targets.md)       | Next-step due targets              | Accepted |
+| [0007](0007-authentication-and-sessions.md) | Authentication and sessions        | Accepted |
 
 ## Template
 
