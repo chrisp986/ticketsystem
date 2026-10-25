@@ -10,6 +10,8 @@ import {
 	attentionReasons
 } from '$lib/modules/tickets/ticket.constants';
 
+import { users } from './users';
+
 /**
  * PostgreSQL enum definitions.
  *
@@ -96,6 +98,12 @@ export const tickets = pgTable(
 
 		attentionReason: attentionReason('attention_reason'),
 
+		assigneeId: uuid('assignee_id').references(() => users.id, { onDelete: 'restrict' }),
+
+		nextStepOwnerId: uuid('next_step_owner_id').references(() => users.id, {
+			onDelete: 'restrict'
+		}),
+
 		updatedAt: timestamp('updated_at', {
 			withTimezone: true,
 			mode: 'date'
@@ -109,6 +117,13 @@ export const tickets = pgTable(
 		index('tickets_status_created_at_idx').on(table.status, table.createdAt),
 
 		index('tickets_priority_status_idx').on(table.priority, table.status),
+
+		index('tickets_assignee_id_status_idx').on(table.assigneeId, table.status),
+
+		index('tickets_next_step_owner_id_next_step_due_idx').on(
+			table.nextStepOwnerId,
+			table.nextStepDue
+		),
 
 		check(
 			'tickets_closed_at_matches_status',
@@ -154,6 +169,10 @@ export const tickets = pgTable(
 		check(
 			'tickets_attention_only_when_open',
 			sql`${table.status} <> 'closed' OR ${table.attentionSince} IS NULL`
+		),
+		check(
+			'tickets_next_step_owner_only_when_open',
+			sql`${table.status} <> 'closed' OR ${table.nextStepOwnerId} IS NULL`
 		)
 	]
 );

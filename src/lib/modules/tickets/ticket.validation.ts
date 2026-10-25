@@ -20,6 +20,11 @@ export const ticketSourceSchema = z.enum(ticketSources);
 export const ticketResolutionSchema = z.enum(ticketResolutions);
 
 /**
+ * An assignee or next-step owner. `null` clears the field, `undefined` keeps it.
+ */
+export const ownerIdSchema = z.uuid().nullable().optional();
+
+/**
  * Complete ticket.
  *
  * This represents the application-facing
@@ -62,7 +67,8 @@ export const createTicketSchema = z.object({
 	description: z.string().trim().nullable().optional(),
 	priority: ticketPrioritySchema.default('medium'),
 	source: ticketSourceSchema.default('manual'),
-	tags: z.array(z.string()).default([])
+	tags: z.array(z.string()).default([]),
+	assigneeId: z.uuid().optional()
 });
 
 /**
@@ -79,7 +85,8 @@ export const updateTicketStatusSchema = z.object({
 	resolutionSummary: z.string().trim().max(2000).optional(),
 	reason: z.string().trim().max(500).optional(),
 	nextStep: z.string().trim().max(500).optional(),
-	nextStepDue: z.date().optional()
+	nextStepDue: z.date().optional(),
+	nextStepOwnerId: ownerIdSchema
 });
 
 /**
@@ -88,4 +95,14 @@ export const updateTicketStatusSchema = z.object({
 export const markAttentionHandledSchema = z.object({
 	ticketId: z.uuid(),
 	expectedVersion: z.number().int().positive()
+});
+
+/**
+ * Input for changing a ticket's assignee and next-step owner.
+ */
+export const assignTicketSchema = z.object({
+	ticketId: z.uuid(),
+	expectedVersion: z.number().int().positive(),
+	assigneeId: ownerIdSchema,
+	nextStepOwnerId: ownerIdSchema
 });

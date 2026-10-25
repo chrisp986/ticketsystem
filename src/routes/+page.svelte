@@ -92,7 +92,11 @@
 			<p><strong>Needs attention:</strong> {attentionReasonLabels[ticket.attentionReason]}</p>
 		{/if}
 
-		<p>Status: {ticketStatusLabels[ticket.status]} · Priority: {ticket.priority}</p>
+		<p>
+			Status: {ticketStatusLabels[ticket.status]} · Priority: {ticket.priority} · Assignee: {ticket.assigneeId
+				? (data.userNames[ticket.assigneeId] ?? '—')
+				: 'Unassigned'}
+		</p>
 
 		{#if ticket.nextStepDue}
 			<p>

@@ -19,6 +19,7 @@ Phases 0 (Foundation) and 1 (Ticket lifecycle) are complete; Phase 2 (Users and 
 - CI running type checks, lint, unit tests, integration tests and the build
 
 - Sign-in with email and password; every page except `/login` and the health endpoints requires it
+- Assignee and next-step owner per ticket, with an assignment history
 
 Email, AI processing and human review are not implemented yet. See the [roadmap](docs/roadmap.md).
 

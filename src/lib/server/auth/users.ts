@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { z } from 'zod';
 
@@ -61,6 +61,23 @@ export async function authenticate(
 	}
 
 	return { id: user.id, email: user.email, name: user.name };
+}
+
+export type UserOption = {
+	id: string;
+	name: string;
+	active: boolean;
+};
+
+/**
+ * All users by name, for assignee and owner choices. Inactive users are included
+ * so that tickets they still hold can show their name (ADR 0008).
+ */
+export async function listUsers(database: NodePgDatabase): Promise<UserOption[]> {
+	return database
+		.select({ id: users.id, name: users.name, active: users.active })
+		.from(users)
+		.orderBy(asc(users.name), asc(users.id));
 }
 
 function isUniqueViolation(err: unknown): boolean {

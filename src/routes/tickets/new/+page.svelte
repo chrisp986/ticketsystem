@@ -5,7 +5,7 @@
 
 	import type { SubmitFunction } from '@sveltejs/kit';
 
-	let { form }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let submitting = $state(false);
 
@@ -34,6 +34,16 @@
 		<label for="description">Description</label>
 		<textarea id="description" name="description" rows="5" value={form?.values.description ?? ''}
 		></textarea>
+	</p>
+
+	<p>
+		<label for="assigneeId">Assignee</label>
+		<select id="assigneeId" name="assigneeId" value={form?.values.assigneeId ?? ''}>
+			<option value="">Unassigned</option>
+			{#each data.users as user (user.id)}
+				<option value={user.id}>{user.name}</option>
+			{/each}
+		</select>
 	</p>
 
 	{#if form?.message}

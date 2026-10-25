@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, expect, test } from 'vitest';
 
 import { tickets } from '../../src/lib/server/db/schema/tickets';
-import { createTicket } from '../../src/lib/server/tickets/create-ticket';
+import { createTicket as createTicketOrInactive } from '../../src/lib/server/tickets/create-ticket';
 import type { Actor } from '../../src/lib/modules/tickets/ticket.types';
 import { ticketAttentionEvents } from '../../src/lib/server/db/schema/ticket-attention-events';
 import { deleteTestTicket, testDb, testPool } from './helpers/db';
@@ -12,6 +12,16 @@ const user: Actor = { type: 'user' };
 afterAll(async () => {
 	await testPool.end();
 });
+
+async function createTicket(...args: Parameters<typeof createTicketOrInactive>) {
+	const created = await createTicketOrInactive(...args);
+
+	if (created === 'inactive_user') {
+		throw new Error('Test ticket was not created.');
+	}
+
+	return created;
+}
 
 test('creates a ticket with the expected defaults', async () => {
 	const created = await createTicket(
