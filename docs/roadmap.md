@@ -27,6 +27,8 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 - [x] 1.6 Attention columns with manual clear
 - [x] 1.7 UI: status, next steps, blockers, attention badge, overdue filter
 
+Done when: every status change passes the transition map and the guard, every open ticket has a next step or attention, and only a person closes a ticket.
+
 ## Phase 2: Users and ownership ([ADR 0005](adr/0005-ticket-notes.md))
 
 - [ ] 2.1 Session authentication and users

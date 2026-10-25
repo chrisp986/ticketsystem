@@ -728,6 +728,45 @@ test('closing clears the next step', async () => {
 	}
 });
 
+test.each(['system', 'ai'] as const)('a %s actor cannot close a ticket', async (actorType) => {
+	const [created] = await testDb
+		.insert(tickets)
+		.values({ subject: `Integration test: ${actorType} cannot close`, status: 'in_progress' })
+		.returning();
+
+	if (!created) {
+		throw new Error('Test ticket was not created.');
+	}
+
+	try {
+		const outcome = await updateTicketStatus(
+			testDb,
+			{
+				ticketId: created.id,
+				status: 'closed',
+				resolution: 'duplicate',
+				expectedVersion: created.version
+			},
+			{ type: actorType }
+		);
+
+		expect(outcome).toBe('human_required');
+
+		const [stored] = await testDb.select().from(tickets).where(eq(tickets.id, created.id));
+
+		expect(stored).toEqual(created);
+
+		const history = await testDb
+			.select()
+			.from(ticketStatusHistory)
+			.where(eq(ticketStatusHistory.ticketId, created.id));
+
+		expect(history).toEqual([]);
+	} finally {
+		await deleteTestTicket(created.id);
+	}
+});
+
 test('in_progress without a next step is rejected', async () => {
 	const [created] = await testDb
 		.insert(tickets)
