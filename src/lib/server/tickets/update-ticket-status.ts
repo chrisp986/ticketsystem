@@ -95,8 +95,7 @@ export async function updateTicketStatus(
 			: null;
 
 		const isReopen = currentTicket.status === 'resolved' && status === 'in_progress';
-		const clearsAttention =
-			currentTicket.attentionReason !== null && (actor.type === 'user' || !isOpen);
+		const clearsAttention = currentTicket.attentionReason !== null && actor.type === 'user';
 
 		await tx
 			.update(tickets)

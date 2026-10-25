@@ -15,8 +15,21 @@ import {
 } from '$lib/modules/tickets/ticket.validation';
 import { markAttentionHandled } from '$lib/server/tickets/mark-attention-handled';
 import { fromLocalInputValue } from '$lib/modules/time/local-datetime';
+import type { GuardBlockerCode } from '$lib/modules/tickets/ticket.guard';
 
 const ticketIdSchema = z.uuid();
+
+/**
+ * One message per guard blocker. A new blocker code fails type checking until it has a message here.
+ */
+const blockerMessages: Record<GuardBlockerCode, string> = {
+	invalid_transition: 'This status change is not allowed.',
+	resolution_required:
+		'Resolving needs a resolution and a summary. Closing an unresolved ticket needs a reason.',
+	next_step_required: 'Describe the next step.',
+	next_step_due_in_past: 'The due date is in the past.',
+	human_required: 'Only a person can close a ticket.'
+};
 
 export const load = (async ({ params }) => {
 	const result = ticketIdSchema.safeParse(params.id);
@@ -92,30 +105,11 @@ export const actions = {
 				});
 			}
 
-			if (outcome === 'invalid_transition') {
-				return fail(422, { message: 'This status change is not allowed.' });
+			if (outcome === 'updated') {
+				return { message: 'Status updated.' };
 			}
 
-			if (outcome === 'resolution_required') {
-				return fail(422, {
-					message:
-						'Resolving needs a resolution and a summary. Closing an unresolved ticket needs a reason.'
-				});
-			}
-
-			if (outcome === 'next_step_required') {
-				return fail(422, { message: 'Describe the next step.' });
-			}
-
-			if (outcome === 'next_step_due_in_past') {
-				return fail(422, { message: 'The due date is in the past.' });
-			}
-
-			if (outcome === 'human_required') {
-				return fail(403, { message: 'Only a person can close a ticket.' });
-			}
-
-			return { message: 'Status updated.' };
+			return fail(422, { message: blockerMessages[outcome] });
 		} catch (err) {
 			logger.error('failed to update ticket status', {
 				requestId: locals.requestId,
