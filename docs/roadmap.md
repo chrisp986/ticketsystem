@@ -33,7 +33,7 @@ Done when: every status change passes the transition map and the guard, every op
 
 - [x] 2.1 Session authentication and users
 - [x] 2.2 Assignee and next-step owner
-- [ ] 2.3 Actor recorded on every change, ticket timeline
+- [x] 2.3 Actor recorded on every change, ticket timeline
 - [ ] 2.4 Ticket notes (internal note, phone call, on site) in the ticket timeline
 - [ ] 2.5 Views: my tickets, unassigned, my overdue
 - [ ] 2.6 Baseline metrics

@@ -1,15 +1,29 @@
 import { eq } from 'drizzle-orm';
-import { afterAll, expect, test } from 'vitest';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import type { Actor } from '../../src/lib/modules/tickets/ticket.types';
 import { ticketAttentionEvents } from '../../src/lib/server/db/schema/ticket-attention-events';
 import { tickets } from '../../src/lib/server/db/schema/tickets';
 import { markAttentionHandled } from '../../src/lib/server/tickets/mark-attention-handled';
-import { deleteTestTicket, testDb, testPool } from './helpers/db';
+import {
+	deleteTestTicket,
+	testDb,
+	testPool,
+	testCreator,
+	deleteTestUsers,
+	insertTestUser
+} from './helpers/db';
 
-const user: Actor = { type: 'user' };
+let user: Actor;
+let testUserId: string;
+
+beforeAll(async () => {
+	testUserId = (await insertTestUser()).id;
+	user = { type: 'user', id: testUserId };
+});
 
 afterAll(async () => {
+	await deleteTestUsers([testUserId]);
 	await testPool.end();
 });
 
@@ -17,6 +31,7 @@ async function insertTicketWithAttention() {
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Integration test: mark attention handled',
 			status: 'new',
 			attentionSince: new Date(),
@@ -99,7 +114,11 @@ test('an outdated version cannot clear attention', async () => {
 test('a ticket without attention stays unchanged', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: nothing to handle', status: 'in_progress' })
+		.values({
+			...testCreator,
+			subject: 'Integration test: nothing to handle',
+			status: 'in_progress'
+		})
 		.returning();
 
 	if (!created) {

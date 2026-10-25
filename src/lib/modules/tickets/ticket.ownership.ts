@@ -54,10 +54,9 @@ export function ownershipAfterStatusChange(
 	change: { from: TicketStatus; to: TicketStatus; nextStepOwnerId?: string | null },
 	actor: Actor
 ): TicketOwnership {
-	const claims =
-		current.assigneeId === null && change.from === 'new' && actor.type === 'user' && !!actor.id;
+	const claims = current.assigneeId === null && change.from === 'new' && actor.type === 'user';
 
-	const assigneeId = claims ? (actor.id ?? null) : current.assigneeId;
+	const assigneeId = claims ? actor.id : current.assigneeId;
 
 	if (change.to === 'closed') {
 		return { assigneeId, nextStepOwnerId: null };

@@ -3,7 +3,7 @@ import { check, index, pgEnum, pgTable, timestamp, uuid } from 'drizzle-orm/pg-c
 
 import { assignmentFields } from '$lib/modules/tickets/ticket.constants';
 
-import { actorType } from './ticket-status-history';
+import { actorCheck, actorColumns } from './actor';
 import { tickets } from './tickets';
 import { users } from './users';
 
@@ -27,9 +27,7 @@ export const ticketAssignmentHistory = pgTable(
 
 		newUserId: uuid('new_user_id').references(() => users.id, { onDelete: 'restrict' }),
 
-		actorType: actorType('actor_type').notNull(),
-
-		actorId: uuid('actor_id').references(() => users.id, { onDelete: 'restrict' }),
+		...actorColumns(),
 
 		changedAt: timestamp('changed_at', {
 			withTimezone: true,
@@ -43,6 +41,12 @@ export const ticketAssignmentHistory = pgTable(
 		check(
 			'ticket_assignment_history_user_changed',
 			sql`${table.previousUserId} IS DISTINCT FROM ${table.newUserId}`
+		),
+		actorCheck(
+			'ticket_assignment_history_actor_valid',
+			table.actorType,
+			table.actorId,
+			table.actorName
 		)
 	]
 );

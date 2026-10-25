@@ -5,12 +5,15 @@
 		resolvingResolutions,
 		ticketResolutionLabels,
 		ticketStatusLabels,
-		attentionReasonLabels
+		attentionReasonLabels,
+		attentionClearTypeLabels,
+		actorTypeLabels,
+		assignmentFieldLabels
 	} from '$lib/modules/tickets/ticket.constants';
 	import { allowedTransitions } from '$lib/modules/tickets/ticket.transitions';
 	import { resolve } from '$app/paths';
 	import { checkStatusChange } from '$lib/modules/tickets/ticket.guard';
-	import type { TicketResolution } from '$lib/modules/tickets/ticket.types';
+	import type { Actor, TicketResolution } from '$lib/modules/tickets/ticket.types';
 	import { defaultNextStepDue, defaultNextSteps, isOverdue } from '$lib/modules/tickets/ticket.due';
 	import { ownershipAfterStatusChange } from '$lib/modules/tickets/ticket.ownership';
 	import {
@@ -29,6 +32,12 @@
 		}
 
 		return user.active ? user.name : `${user.name} (inactive)`;
+	}
+
+	function actorName(actor: Actor): string {
+		return actor.type === 'user'
+			? userName(actor.id)
+			: `${actorTypeLabels[actor.type]} (${actor.name})`;
 	}
 
 	// Active users, plus inactive users who still hold this ticket (ADR 0008).
@@ -236,31 +245,45 @@
 	<p>Closed tickets cannot be changed.</p>
 {/if}
 
-<section aria-labelledby="status-history-heading">
-	<h2 id="status-history-heading">Status history</h2>
+<section aria-labelledby="timeline-heading">
+	<h2 id="timeline-heading">Timeline</h2>
 
-	{#if data.statusHistory.length === 0}
-		<p>No status changes recorded yet.</p>
-	{:else}
-		<p>Showing up to 50 most recent changes. Times are in UTC.</p>
+	<p>Showing up to {data.timelineLimit} most recent entries.</p>
 
-		<ol>
-			{#each data.statusHistory as entry (entry.id)}
-				<li>
+	<ol>
+		{#each data.timeline as entry (`${entry.kind}:${entry.id}`)}
+			<li>
+				{#if entry.kind === 'created'}
+					<span>Ticket created</span>
+				{:else if entry.kind === 'status'}
 					<span>
-						{ticketStatusLabels[entry.previousStatus]}
+						Status: {ticketStatusLabels[entry.previousStatus]}
 						→
 						{ticketStatusLabels[entry.newStatus]}
 					</span>
+				{:else if entry.kind === 'attention'}
+					<span>
+						{#if entry.eventType === 'raised'}
+							Needs attention: {attentionReasonLabels[entry.reason]}
+						{:else}
+							Attention cleared {entry.clearType ? attentionClearTypeLabels[entry.clearType] : ''}:
+							{attentionReasonLabels[entry.reason]}
+						{/if}
+					</span>
+				{:else}
+					<span>
+						{assignmentFieldLabels[entry.field]}:
+						{entry.previousUserId ? userName(entry.previousUserId) : 'nobody'}
+						→
+						{entry.newUserId ? userName(entry.newUserId) : 'nobody'}
+					</span>
+				{/if}
 
-					<span>by {entry.actorType}</span>
+				<span>by {actorName(entry.actor)}</span>
 
-					<time datetime={entry.changedAt.toISOString()}>
-						{entry.changedAt.toLocaleString('en-GB', {
-							timeZone: 'UTC'
-						})}
-					</time>
+				<time datetime={entry.at.toISOString()}>{formatLocalDateTime(entry.at)}</time>
 
+				{#if entry.kind === 'status'}
 					{#if entry.resolution}
 						<p>Resolution: {ticketResolutionLabels[entry.resolution]}</p>
 					{/if}
@@ -272,10 +295,10 @@
 					{#if entry.reason}
 						<p>Reason: {entry.reason}</p>
 					{/if}
-				</li>
-			{/each}
-		</ol>
-	{/if}
+				{/if}
+			</li>
+		{/each}
+	</ol>
 </section>
 
 {#if form?.message}

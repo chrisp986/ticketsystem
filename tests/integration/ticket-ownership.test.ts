@@ -7,7 +7,14 @@ import { tickets } from '../../src/lib/server/db/schema/tickets';
 import { assignTicket } from '../../src/lib/server/tickets/assign-ticket';
 import { createTicket } from '../../src/lib/server/tickets/create-ticket';
 import { updateTicketStatus } from '../../src/lib/server/tickets/update-ticket-status';
-import { deleteTestTicket, deleteTestUsers, insertTestUser, testDb, testPool } from './helpers/db';
+import {
+	deleteTestTicket,
+	deleteTestUsers,
+	insertTestUser,
+	testDb,
+	testPool,
+	testCreator
+} from './helpers/db';
 
 const ticketIds: string[] = [];
 const userIds: string[] = [];
@@ -37,7 +44,7 @@ function actorFor(userId: string): Actor {
 async function insertTicket(values: Partial<typeof tickets.$inferInsert> = {}) {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: ownership', status: 'new', ...values })
+		.values({ ...testCreator, subject: 'Integration test: ownership', status: 'new', ...values })
 		.returning();
 
 	if (!created) {
@@ -237,6 +244,7 @@ test('the database rejects a next-step owner on a closed ticket', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: closed with owner',
 				status: 'closed',
 				closedAt: new Date(),

@@ -22,8 +22,10 @@ const handleRequest: Handle = async ({ event, resolve }) => {
 
 	const level = event.url.pathname.startsWith('/health/') ? 'debug' : 'info';
 
+	// The user ID links every log line of the request to a person; names and emails are never logged (ADR 0009).
 	logger[level]('request completed', {
 		requestId,
+		userId: event.locals.user?.id,
 		method: event.request.method,
 		path: event.url.pathname,
 		status: response.status,

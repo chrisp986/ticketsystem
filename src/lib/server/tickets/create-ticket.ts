@@ -4,6 +4,7 @@ import { defaultNextStepDue, defaultNextSteps } from '../../modules/tickets/tick
 import type { Actor, CreateTicketInput } from '../../modules/tickets/ticket.types';
 import { ticketAttentionEvents } from '../db/schema/ticket-attention-events';
 import { tickets } from '../db/schema/tickets';
+import { actorFields } from './actor-fields';
 import { hasInactiveUser, recordOwnershipChanges } from './ownership';
 
 export type Ticket = typeof tickets.$inferSelect;
@@ -18,6 +19,7 @@ export async function createTicket(
 	now: Date = new Date()
 ): Promise<Ticket | 'inactive_user'> {
 	const assigneeId = input.assigneeId ?? null;
+	const { actorType, actorId, actorName } = actorFields(actor);
 
 	return database.transaction(async (tx) => {
 		if (assigneeId && (await hasInactiveUser(tx, [assigneeId]))) {
@@ -33,7 +35,12 @@ export async function createTicket(
 				nextStep: defaultNextSteps.new,
 				nextStepDue: defaultNextStepDue('new', input.priority, now),
 				attentionSince: now,
-				attentionReason: 'new_ticket'
+				attentionReason: 'new_ticket',
+				createdAt: now,
+				updatedAt: now,
+				createdByType: actorType,
+				createdById: actorId,
+				createdByName: actorName
 			})
 			.returning();
 
@@ -45,8 +52,7 @@ export async function createTicket(
 			ticketId: ticket.id,
 			eventType: 'raised',
 			reason: 'new_ticket',
-			actorType: actor.type,
-			actorId: actor.id ?? null,
+			...actorFields(actor),
 			occurredAt: now
 		});
 

@@ -93,6 +93,12 @@ export const attentionEventTypes = ['raised', 'cleared'] as const;
  * How attention was cleared (ADR 0002).
  */
 export const attentionClearTypes = ['reply', 'status_change', 'manual'] as const;
+
+export const attentionClearTypeLabels = {
+	reply: 'by a reply',
+	status_change: 'by a status change',
+	manual: 'as handled'
+} satisfies Record<(typeof attentionClearTypes)[number], string>;
 /**
  * Ticket priorities.
  */
@@ -104,11 +110,22 @@ export const ticketPriorities = ['low', 'medium', 'high', 'critical'] as const;
 export const ticketSources = ['manual', 'email', 'web', 'api'] as const;
 
 /**
- * Who made a change (ADR 0001).
+ * Who made a change (ADR 0001, ADR 0009).
  */
 export const actorTypes = ['user', 'system', 'ai'] as const;
+
+export const actorTypeLabels = {
+	user: 'User',
+	system: 'System',
+	ai: 'AI'
+} satisfies Record<(typeof actorTypes)[number], string>;
 
 /**
  * Ownership fields tracked in the assignment history (ADR 0008).
  */
 export const assignmentFields = ['assignee', 'next_step_owner'] as const;
+
+export const assignmentFieldLabels = {
+	assignee: 'Assignee',
+	next_step_owner: 'Next-step owner'
+} satisfies Record<(typeof assignmentFields)[number], string>;

@@ -2,6 +2,7 @@ import type { z } from 'zod';
 
 import {
 	actorTypes,
+	assignmentFields,
 	ticketPriorities,
 	ticketResolutions,
 	ticketSources,
@@ -38,6 +39,8 @@ export type AttentionEventType = (typeof attentionEventTypes)[number];
 
 export type AttentionClearType = (typeof attentionClearTypes)[number];
 
+export type AssignmentField = (typeof assignmentFields)[number];
+
 export type TicketView = (typeof ticketViews)[number];
 
 /**
@@ -62,7 +65,8 @@ export type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 
 export type ActorType = (typeof actorTypes)[number];
 
-export type Actor = {
-	type: ActorType;
-	id?: string;
-};
+/**
+ * Who made a change: a person by user ID, the system or AI by name (ADR 0009).
+ */
+export type Actor =
+	{ type: 'user'; id: string } | { type: Exclude<ActorType, 'user'>; name: string };

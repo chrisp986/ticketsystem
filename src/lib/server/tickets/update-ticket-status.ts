@@ -14,6 +14,7 @@ import {
 	newlyAssignedUserIds,
 	ownershipAfterStatusChange
 } from '../../modules/tickets/ticket.ownership';
+import { actorFields } from './actor-fields';
 import { hasInactiveUser, recordOwnershipChanges } from './ownership';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
@@ -149,8 +150,7 @@ export async function updateTicketStatus(
 			previousStatus: currentTicket.status,
 			newStatus: status,
 			changedAt: now,
-			actorType: actor.type,
-			actorId: actor.id ?? null,
+			...actorFields(actor),
 			reason: reason || null,
 			resolution: nextResolution,
 			resolutionSummary: nextResolutionSummary
@@ -164,8 +164,7 @@ export async function updateTicketStatus(
 				eventType: 'cleared',
 				reason: currentTicket.attentionReason,
 				clearType: 'status_change',
-				actorType: actor.type,
-				actorId: actor.id ?? null,
+				...actorFields(actor),
 				occurredAt: now
 			});
 		}
