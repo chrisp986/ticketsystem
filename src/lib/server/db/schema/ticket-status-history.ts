@@ -1,10 +1,7 @@
-import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import { actorTypes } from '$lib/modules/tickets/ticket.constants';
-
+import { actorCheck, actorColumns } from './actor';
 import { ticketResolution, tickets, ticketStatus } from './tickets';
-
-export const actorType = pgEnum('actor_type', actorTypes);
 
 export const ticketStatusHistory = pgTable(
 	'ticket_status_history',
@@ -19,9 +16,7 @@ export const ticketStatusHistory = pgTable(
 
 		newStatus: ticketStatus('new_status').notNull(),
 
-		actorType: actorType('actor_type').notNull(),
-
-		actorId: text('actor_id'),
+		...actorColumns(),
 
 		reason: text('reason'),
 
@@ -37,7 +32,8 @@ export const ticketStatusHistory = pgTable(
 			.notNull()
 	},
 	(table) => [
-		index('ticket_status_history_ticket_id_changed_at_idx').on(table.ticketId, table.changedAt)
+		index('ticket_status_history_ticket_id_changed_at_idx').on(table.ticketId, table.changedAt),
+		actorCheck('ticket_status_history_actor_valid', table.actorType, table.actorId, table.actorName)
 	]
 );
 

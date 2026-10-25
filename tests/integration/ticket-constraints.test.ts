@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, expect, test } from 'vitest';
 
 import { tickets } from '../../src/lib/server/db/schema/tickets';
-import { testDb, testPool } from './helpers/db';
+import { testDb, testPool, testCreator } from './helpers/db';
 
 const someTime = new Date('2020-01-01T00:00:00.000Z');
 
@@ -14,7 +14,11 @@ test('rejects a closed ticket without closedAt', async () => {
 	await expect(
 		testDb
 			.insert(tickets)
-			.values({ subject: 'Constraint test: closed without closedAt', status: 'closed' })
+			.values({
+				...testCreator,
+				subject: 'Constraint test: closed without closedAt',
+				status: 'closed'
+			})
 			.execute()
 	).rejects.toMatchObject({
 		cause: { code: '23514', constraint: 'tickets_closed_at_matches_status' }
@@ -25,7 +29,12 @@ test('rejects a new ticket with closedAt', async () => {
 	await expect(
 		testDb
 			.insert(tickets)
-			.values({ subject: 'Constraint test: new with closedAt', status: 'new', closedAt: someTime })
+			.values({
+				...testCreator,
+				subject: 'Constraint test: new with closedAt',
+				status: 'new',
+				closedAt: someTime
+			})
 			.execute()
 	).rejects.toMatchObject({
 		cause: { code: '23514', constraint: 'tickets_closed_at_matches_status' }
@@ -37,6 +46,7 @@ test('rejects a resolved ticket without firstResolvedAt', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: resolved without firstResolvedAt',
 				status: 'resolved',
 				resolvedAt: someTime,
@@ -53,7 +63,11 @@ test('rejects a negative reopen count', async () => {
 	await expect(
 		testDb
 			.insert(tickets)
-			.values({ subject: 'Constraint test: negative reopen count', reopenCount: -1 })
+			.values({
+				...testCreator,
+				subject: 'Constraint test: negative reopen count',
+				reopenCount: -1
+			})
 			.execute()
 	).rejects.toMatchObject({
 		cause: { code: '23514', constraint: 'tickets_reopen_count_not_negative' }
@@ -65,6 +79,7 @@ test('rejects a resolved ticket without resolvedAt', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: resolved without resolvedAt',
 				status: 'resolved',
 				resolution: 'solved',
@@ -81,6 +96,7 @@ test('rejects a new ticket with resolvedAt', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: new with resolvedAt',
 				status: 'new',
 				resolvedAt: someTime,
@@ -96,7 +112,11 @@ test('rejects a new ticket with a resolution', async () => {
 	await expect(
 		testDb
 			.insert(tickets)
-			.values({ subject: 'Constraint test: new with resolution', resolution: 'solved' })
+			.values({
+				...testCreator,
+				subject: 'Constraint test: new with resolution',
+				resolution: 'solved'
+			})
 			.execute()
 	).rejects.toMatchObject({
 		cause: { code: '23514', constraint: 'tickets_resolution_only_when_resolved_or_closed' }
@@ -108,6 +128,7 @@ test('rejects a resolved ticket without a summary', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: resolved without summary',
 				status: 'resolved',
 				resolvedAt: someTime,
@@ -125,6 +146,7 @@ test('rejects a closed ticket without a resolution', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: closed without resolution',
 				status: 'closed',
 				closedAt: someTime
@@ -140,6 +162,7 @@ test('rejects an unresolved closed ticket marked as solved', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: closed unresolved as solved',
 				status: 'closed',
 				closedAt: someTime,
@@ -155,6 +178,7 @@ test('allows closing a ticket that was never resolved', async () => {
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Constraint test: closed without resolving',
 			status: 'closed',
 			closedAt: someTime,
@@ -177,7 +201,7 @@ test('rejects an open ticket without a next-step due date', async () => {
 	await expect(
 		testDb
 			.insert(tickets)
-			.values({ subject: 'Constraint test: open without due', nextStepDue: null })
+			.values({ ...testCreator, subject: 'Constraint test: open without due', nextStepDue: null })
 			.execute()
 	).rejects.toMatchObject({
 		cause: { code: '23514', constraint: 'tickets_open_has_next_step_due' }
@@ -188,7 +212,11 @@ test('rejects attention without a reason', async () => {
 	await expect(
 		testDb
 			.insert(tickets)
-			.values({ subject: 'Constraint test: attention without reason', attentionSince: someTime })
+			.values({
+				...testCreator,
+				subject: 'Constraint test: attention without reason',
+				attentionSince: someTime
+			})
 			.execute()
 	).rejects.toMatchObject({
 		cause: { code: '23514', constraint: 'tickets_attention_fields_together' }
@@ -200,6 +228,7 @@ test('rejects attention on a closed ticket', async () => {
 		testDb
 			.insert(tickets)
 			.values({
+				...testCreator,
 				subject: 'Constraint test: closed with attention',
 				status: 'closed',
 				closedAt: someTime,

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-25
+- Amended: 2026-10-25 (actor IDs, see Consequences)
 
 ## Context
 
@@ -23,7 +24,7 @@ Every change is attributed to an actor (ADR 0001), notes need an author (ADR 000
 
 ## Consequences
 
-- Recording the signed-in user as the actor of every change is roadmap step 2.3; until then, actor IDs stay empty.
+- The signed-in user is recorded as the actor of every change. _Amendment (2026-10-25): this said actor IDs stay empty until step 2.3; the ticket forms pass the user since ADR 0008, and ADR 0009 defines actors._
 - Failed logins are not rate-limited yet. That must be added before the app is reachable from outside the local network.
 - Password reset and deactivation have no UI or script yet; they are done with SQL until a later step adds them.
 - Modules used by scripts and the future worker must not import SvelteKit modules (ADR 0003). The database is created by a framework-neutral `createDb` factory.

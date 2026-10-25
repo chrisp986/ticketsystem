@@ -29,11 +29,11 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 
 Done when: every status change passes the transition map and the guard, every open ticket has a next step with a due date, and only a person closes a ticket.
 
-## Phase 2: Users and ownership ([ADR 0005](adr/0005-ticket-notes.md), [ADR 0007](adr/0007-authentication-and-sessions.md), [ADR 0008](adr/0008-ticket-ownership.md))
+## Phase 2: Users and ownership ([ADR 0005](adr/0005-ticket-notes.md), [ADR 0007](adr/0007-authentication-and-sessions.md), [ADR 0008](adr/0008-ticket-ownership.md), [ADR 0009](adr/0009-actors.md))
 
 - [x] 2.1 Session authentication and users
 - [x] 2.2 Assignee and next-step owner
-- [ ] 2.3 Actor recorded on every change
+- [x] 2.3 Actor recorded on every change, ticket timeline
 - [ ] 2.4 Ticket notes (internal note, phone call, on site) in the ticket timeline
 - [ ] 2.5 Views: my tickets, unassigned, my overdue
 - [ ] 2.6 Baseline metrics

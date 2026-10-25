@@ -3,6 +3,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { TicketOwnership } from '../../modules/tickets/ticket.ownership';
 import type { Actor } from '../../modules/tickets/ticket.types';
+import { actorFields } from './actor-fields';
 import { ticketAssignmentHistory } from '../db/schema/ticket-assignment-history';
 import { users } from '../db/schema/users';
 
@@ -37,8 +38,7 @@ export async function recordOwnershipChanges(
 ): Promise<void> {
 	const base = {
 		ticketId,
-		actorType: actor.type,
-		actorId: actor.type === 'user' ? (actor.id ?? null) : null,
+		...actorFields(actor),
 		changedAt
 	};
 

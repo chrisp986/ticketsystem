@@ -5,8 +5,7 @@ import { tickets } from '$lib/server/db/schema/tickets';
 import { logger } from '$lib/server/logger';
 
 import { error, fail } from '@sveltejs/kit';
-import { desc, eq } from 'drizzle-orm';
-import { ticketStatusHistory } from '$lib/server/db/schema/ticket-status-history';
+import { eq } from 'drizzle-orm';
 import { updateTicketStatus } from '$lib/server/tickets/update-ticket-status';
 import type { Actions, PageServerLoad } from './$types';
 import {
@@ -16,6 +15,7 @@ import {
 } from '$lib/modules/tickets/ticket.validation';
 import { markAttentionHandled } from '$lib/server/tickets/mark-attention-handled';
 import { assignTicket } from '$lib/server/tickets/assign-ticket';
+import { loadTicketTimeline, TIMELINE_LIMIT } from '$lib/server/tickets/ticket-timeline';
 import { listUsers } from '$lib/server/auth/users';
 import { userActor } from '$lib/server/auth/actor';
 import { fromLocalInputValue } from '$lib/modules/time/local-datetime';
@@ -63,18 +63,12 @@ export const load = (async ({ params, locals }) => {
 		error(404, 'Ticket not found.');
 	}
 
-	const statusHistory = await db
-		.select()
-		.from(ticketStatusHistory)
-		.where(eq(ticketStatusHistory.ticketId, ticket.id))
-		.orderBy(desc(ticketStatusHistory.changedAt), desc(ticketStatusHistory.id))
-		.limit(50);
-
-	const users = await listUsers(db);
+	const [timeline, users] = await Promise.all([loadTicketTimeline(db, ticket), listUsers(db)]);
 
 	return {
 		ticket,
-		statusHistory,
+		timeline,
+		timelineLimit: TIMELINE_LIMIT,
 		users,
 		currentUserId: userActor(locals.user).id
 	};

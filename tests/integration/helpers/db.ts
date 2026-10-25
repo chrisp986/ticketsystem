@@ -18,6 +18,11 @@ export const testPool = new Pool({
 export const testDb = drizzle({ client: testPool });
 
 /**
+ * The creator of tickets that tests insert directly, bypassing `createTicket` (ADR 0009).
+ */
+export const testCreator = { createdByType: 'system', createdByName: 'integration-test' } as const;
+
+/**
  * Deletes a test ticket together with its attention events, status and assignment history.
  *
  * They reference the ticket with `restrict`, so they must be deleted first.

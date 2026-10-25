@@ -10,6 +10,7 @@ import {
 	attentionReasons
 } from '$lib/modules/tickets/ticket.constants';
 
+import { actorCheck, actorType } from './actor';
 import { users } from './users';
 
 /**
@@ -72,6 +73,12 @@ export const tickets = pgTable(
 		})
 			.defaultNow()
 			.notNull(),
+
+		createdByType: actorType('created_by_type').notNull(),
+
+		createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'restrict' }),
+
+		createdByName: text('created_by_name'),
 
 		resolution: ticketResolution('resolution'),
 
@@ -173,6 +180,12 @@ export const tickets = pgTable(
 		check(
 			'tickets_next_step_owner_only_when_open',
 			sql`${table.status} <> 'closed' OR ${table.nextStepOwnerId} IS NULL`
+		),
+		actorCheck(
+			'tickets_created_by_valid',
+			table.createdByType,
+			table.createdById,
+			table.createdByName
 		)
 	]
 );

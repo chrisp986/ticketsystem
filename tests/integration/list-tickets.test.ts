@@ -5,7 +5,7 @@ import { afterAll, expect, test } from 'vitest';
 import type { NewTicketRecord } from '../../src/lib/server/db/schema/tickets';
 import { tickets } from '../../src/lib/server/db/schema/tickets';
 import { listTickets } from '../../src/lib/server/tickets/list-tickets';
-import { deleteTestTicket, testDb, testPool } from './helpers/db';
+import { deleteTestTicket, testDb, testPool, testCreator } from './helpers/db';
 
 afterAll(async () => {
 	await testPool.end();
@@ -13,13 +13,16 @@ afterAll(async () => {
 
 const hour = 60 * 60 * 1000;
 
-async function insertTickets(marker: string, rows: Omit<NewTicketRecord, 'subject'>[]) {
+async function insertTickets(
+	marker: string,
+	rows: Omit<NewTicketRecord, 'subject' | keyof typeof testCreator>[]
+) {
 	const created = [];
 
 	for (const [index, row] of rows.entries()) {
 		const [ticket] = await testDb
 			.insert(tickets)
-			.values({ ...row, subject: `List test ${marker} ${index}` })
+			.values({ ...testCreator, ...row, subject: `List test ${marker} ${index}` })
 			.returning();
 
 		if (!ticket) {

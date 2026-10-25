@@ -1,9 +1,9 @@
 import { sql } from 'drizzle-orm';
-import { check, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { check, index, pgEnum, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { attentionClearTypes, attentionEventTypes } from '$lib/modules/tickets/ticket.constants';
 
-import { actorType } from './ticket-status-history';
+import { actorCheck, actorColumns } from './actor';
 import { attentionReason, tickets } from './tickets';
 
 export const attentionEventType = pgEnum('attention_event_type', attentionEventTypes);
@@ -28,9 +28,7 @@ export const ticketAttentionEvents = pgTable(
 
 		clearType: attentionClearType('clear_type'),
 
-		actorType: actorType('actor_type').notNull(),
-
-		actorId: text('actor_id'),
+		...actorColumns(),
 
 		occurredAt: timestamp('occurred_at', {
 			withTimezone: true,
@@ -44,6 +42,12 @@ export const ticketAttentionEvents = pgTable(
 		check(
 			'ticket_attention_events_clear_type_only_when_cleared',
 			sql`(${table.eventType} = 'cleared') = (${table.clearType} IS NOT NULL)`
+		),
+		actorCheck(
+			'ticket_attention_events_actor_valid',
+			table.actorType,
+			table.actorId,
+			table.actorName
 		)
 	]
 );

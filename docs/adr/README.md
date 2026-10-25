@@ -12,6 +12,7 @@ An ADR records one significant design decision: the context, the decision and it
 | [0006](0006-next-step-due-targets.md)       | Next-step due targets              | Accepted |
 | [0007](0007-authentication-and-sessions.md) | Authentication and sessions        | Accepted |
 | [0008](0008-ticket-ownership.md)            | Ticket ownership                   | Accepted |
+| [0009](0009-actors.md)                      | Actors                             | Accepted |
 
 ## Template
 

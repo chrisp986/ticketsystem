@@ -97,7 +97,7 @@ describe('ownershipAfterStatusChange', () => {
 			ownershipAfterStatusChange(
 				{ assigneeId: null, nextStepOwnerId: null },
 				{ from: 'new', to: 'in_progress' },
-				{ type: 'system' }
+				{ type: 'system', name: 'email-sync' }
 			)
 		).toEqual({ assigneeId: null, nextStepOwnerId: null });
 	});

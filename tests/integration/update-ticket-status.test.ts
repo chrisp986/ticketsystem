@@ -1,26 +1,37 @@
 import { eq } from 'drizzle-orm';
-import { afterAll, expect, test } from 'vitest';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 
 import { tickets } from '../../src/lib/server/db/schema/tickets';
 import { updateTicketStatus } from '../../src/lib/server/tickets/update-ticket-status';
 import { ticketStatusHistory } from '../../src/lib/server/db/schema/ticket-status-history';
 import type { Actor } from '../../src/lib/modules/tickets/ticket.types';
-import { deleteTestTicket, testDb, testPool } from './helpers/db';
+import {
+	deleteTestTicket,
+	testDb,
+	testPool,
+	testCreator,
+	deleteTestUsers,
+	insertTestUser
+} from './helpers/db';
 import { ticketAttentionEvents } from '../../src/lib/server/db/schema/ticket-attention-events';
 
-const user: Actor = { type: 'user' };
+let user: Actor;
+let testUserId: string;
+
+beforeAll(async () => {
+	testUserId = (await insertTestUser()).id;
+	user = { type: 'user', id: testUserId };
+});
 
 afterAll(async () => {
+	await deleteTestUsers([testUserId]);
 	await testPool.end();
 });
 
 test('saving the current status does not change the ticket', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({
-			subject: 'Integration test: unchanged status',
-			status: 'new'
-		})
+		.values({ ...testCreator, subject: 'Integration test: unchanged status', status: 'new' })
 		.returning();
 
 	if (!created) {
@@ -61,6 +72,7 @@ test('resolving a ticket updates its status, version and timestamps', async () =
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Integration test: resolve ticket',
 			status: 'new',
 			createdAt: originalTime,
@@ -113,10 +125,7 @@ test('resolving a ticket updates its status, version and timestamps', async () =
 test('an outdated version cannot overwrite a newer status change', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({
-			subject: 'Integration test: outdated version',
-			status: 'new'
-		})
+		.values({ ...testCreator, subject: 'Integration test: outdated version', status: 'new' })
 		.returning();
 
 	if (!created) {
@@ -194,6 +203,7 @@ test('closing a resolved ticket preserves its resolution timestamp', async () =>
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Integration test: close resolved ticket',
 			status: 'resolved',
 			resolvedAt: resolvedTime,
@@ -247,6 +257,7 @@ test('a closed ticket cannot change status', async () => {
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Integration test: closed ticket is terminal',
 			status: 'closed',
 			createdAt: resolvedTime,
@@ -297,6 +308,7 @@ test('reopening a resolved ticket clears its resolution timestamp', async () => 
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Integration test: reopen resolved ticket',
 			status: 'resolved',
 			createdAt: resolvedTime,
@@ -359,7 +371,7 @@ test('reopening a resolved ticket clears its resolution timestamp', async () => 
 test('reopening counts the reopen and keeps the first resolution time', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: reopen metrics', status: 'in_progress' })
+		.values({ ...testCreator, subject: 'Integration test: reopen metrics', status: 'in_progress' })
 		.returning();
 
 	if (!created) {
@@ -416,7 +428,11 @@ test.each([
 ] as const)('%s is rejected', async (_name, status, resolution) => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: resolution required', status: 'in_progress' })
+		.values({
+			...testCreator,
+			subject: 'Integration test: resolution required',
+			status: 'in_progress'
+		})
 		.returning();
 
 	if (!created) {
@@ -448,7 +464,11 @@ test.each([
 test('closing an unresolved ticket stores the reason', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: close as duplicate', status: 'in_progress' })
+		.values({
+			...testCreator,
+			subject: 'Integration test: close as duplicate',
+			status: 'in_progress'
+		})
 		.returning();
 
 	if (!created) {
@@ -484,7 +504,7 @@ test('closing an unresolved ticket stores the reason', async () => {
 test('the history records actor, reason and resolution', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: history details', status: 'in_progress' })
+		.values({ ...testCreator, subject: 'Integration test: history details', status: 'in_progress' })
 		.returning();
 
 	if (!created) {
@@ -517,7 +537,8 @@ test('the history records actor, reason and resolution', async () => {
 			previousStatus: 'in_progress',
 			newStatus: 'resolved',
 			actorType: 'user',
-			actorId: null,
+			actorId: user.type === 'user' ? user.id : null,
+			actorName: null,
 			reason: 'Customer confirmed by phone.',
 			resolution: 'workaround',
 			resolutionSummary: 'Use the second charger.'
@@ -530,7 +551,11 @@ test('the history records actor, reason and resolution', async () => {
 test('reopening keeps the previous resolution in the history', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: history after reopen', status: 'in_progress' })
+		.values({
+			...testCreator,
+			subject: 'Integration test: history after reopen',
+			status: 'in_progress'
+		})
 		.returning();
 
 	if (!created) {
@@ -593,7 +618,7 @@ test('reopening keeps the previous resolution in the history', async () => {
 test('a ticket with history cannot be deleted', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: history protects ticket', status: 'new' })
+		.values({ ...testCreator, subject: 'Integration test: history protects ticket', status: 'new' })
 		.returning();
 
 	if (!created) {
@@ -625,7 +650,11 @@ test('a ticket with history cannot be deleted', async () => {
 test('waiting_customer without a due date gets the default', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: default due date', status: 'in_progress' })
+		.values({
+			...testCreator,
+			subject: 'Integration test: default due date',
+			status: 'in_progress'
+		})
 		.returning();
 
 	if (!created) {
@@ -655,7 +684,11 @@ test('waiting_customer without a due date gets the default', async () => {
 test('an explicit due date is stored', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: explicit due date', status: 'in_progress' })
+		.values({
+			...testCreator,
+			subject: 'Integration test: explicit due date',
+			status: 'in_progress'
+		})
 		.returning();
 
 	if (!created) {
@@ -692,6 +725,7 @@ test('closing clears the next step', async () => {
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Integration test: close clears next step',
 			status: 'in_progress',
 			nextStep: 'Check the logs.'
@@ -731,7 +765,11 @@ test('closing clears the next step', async () => {
 test.each(['system', 'ai'] as const)('a %s actor cannot close a ticket', async (actorType) => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: `Integration test: ${actorType} cannot close`, status: 'in_progress' })
+		.values({
+			...testCreator,
+			subject: `Integration test: ${actorType} cannot close`,
+			status: 'in_progress'
+		})
 		.returning();
 
 	if (!created) {
@@ -747,7 +785,7 @@ test.each(['system', 'ai'] as const)('a %s actor cannot close a ticket', async (
 				resolution: 'duplicate',
 				expectedVersion: created.version
 			},
-			{ type: actorType }
+			{ type: actorType, name: 'integration-test' }
 		);
 
 		expect(outcome).toBe('human_required');
@@ -770,7 +808,7 @@ test.each(['system', 'ai'] as const)('a %s actor cannot close a ticket', async (
 test('in_progress without a next step is rejected', async () => {
 	const [created] = await testDb
 		.insert(tickets)
-		.values({ subject: 'Integration test: next step required', status: 'new' })
+		.values({ ...testCreator, subject: 'Integration test: next step required', status: 'new' })
 		.returning();
 
 	if (!created) {
@@ -798,6 +836,7 @@ test('a status change by an agent clears attention', async () => {
 	const [created] = await testDb
 		.insert(tickets)
 		.values({
+			...testCreator,
 			subject: 'Integration test: status change clears attention',
 			status: 'new',
 			attentionSince: new Date(),
