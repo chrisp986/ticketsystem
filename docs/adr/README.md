@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-An ADR records one significant design decision: the context, the decision and its consequences. ADRs are not rewritten when a decision changes; a new ADR supersedes the old one.
+An ADR records one significant design decision: the context, the decision and its consequences. ADRs are not rewritten when a decision changes; a new ADR supersedes the old one. A correction that only brings the text in line with what was decided and implemented is made in place and marked as an amendment.
 
 | ADR                                         | Title                              | Status   |
 | ------------------------------------------- | ---------------------------------- | -------- |

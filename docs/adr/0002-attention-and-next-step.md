@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-04
+- Amended: 2026-10-25 (the database invariant, see below)
 
 ## Context
 
@@ -17,7 +18,7 @@ A ticket's status says where it is in the workflow, but not whether a human must
 - A reply clears only attention that existed when the agent loaded the ticket; the ticket version detects messages that arrived meanwhile.
 - Every set and clear is recorded with actor and clear type (`reply`, `status_change`, `manual`).
 
-**Every open ticket has a future.** Each ticket has `next_step`, `next_step_due` and later `next_step_owner`. The database enforces: a ticket that is not closed has either a next step due date or attention.
+**Every open ticket has a future.** Each ticket has `next_step`, `next_step_due` and later `next_step_owner`. The database enforces: a ticket that is not closed has a next step due date. Attention does not replace it, because attention is cleared and the ticket would then have no future.
 
 | Status             | Next step                               |
 | ------------------ | --------------------------------------- |
@@ -28,6 +29,8 @@ A ticket's status says where it is in the workflow, but not whether a human must
 | `resolved`         | Await confirmation, then close          |
 
 An overdue next step raises attention with reason `next_step_overdue`. Overdue tickets can be listed with a query, without a job queue.
+
+**Amendment (2026-10-25).** This ADR first allowed "a next step due date or attention". Step 1.5 implemented the stricter rule above (`tickets_open_has_next_step_due`), and ADR 0006 builds on it; the text now matches.
 
 **Later.** Manual attention is modeled as a timed follow-up with a required note, not a bare flag. Once a ticket can have several reasons at once, the columns move into an `attention_items` table.
 
