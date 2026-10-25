@@ -10,9 +10,15 @@ import { checkStatusChange } from '../../modules/tickets/ticket.guard';
 import type { GuardBlockerCode } from '../../modules/tickets/ticket.guard';
 import { defaultNextStepDue, defaultNextSteps } from '../../modules/tickets/ticket.due';
 import { ticketAttentionEvents } from '../db/schema/ticket-attention-events';
+import {
+	newlyAssignedUserIds,
+	ownershipAfterStatusChange
+} from '../../modules/tickets/ticket.ownership';
+import { hasInactiveUser, recordOwnershipChanges } from './ownership';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
-type UpdateTicketStatusResult = 'updated' | 'unchanged' | 'conflict' | GuardBlockerCode;
+type UpdateTicketStatusResult =
+	'updated' | 'unchanged' | 'conflict' | 'inactive_user' | GuardBlockerCode;
 
 export async function updateTicketStatus(
 	database: NodePgDatabase,
@@ -27,7 +33,8 @@ export async function updateTicketStatus(
 		resolutionSummary,
 		reason,
 		nextStep,
-		nextStepDue
+		nextStepDue,
+		nextStepOwnerId
 	} = input;
 
 	return database.transaction(async (tx): Promise<UpdateTicketStatusResult> => {
@@ -41,7 +48,9 @@ export async function updateTicketStatus(
 				resolutionSummary: tickets.resolutionSummary,
 				priority: tickets.priority,
 				attentionSince: tickets.attentionSince,
-				attentionReason: tickets.attentionReason
+				attentionReason: tickets.attentionReason,
+				assigneeId: tickets.assigneeId,
+				nextStepOwnerId: tickets.nextStepOwnerId
 			})
 			.from(tickets)
 			.where(eq(tickets.id, ticketId))
@@ -68,6 +77,21 @@ export async function updateTicketStatus(
 
 		if (blocker) {
 			return blocker.code;
+		}
+
+		const ownershipBefore = {
+			assigneeId: currentTicket.assigneeId,
+			nextStepOwnerId: currentTicket.nextStepOwnerId
+		};
+
+		const ownership = ownershipAfterStatusChange(
+			ownershipBefore,
+			{ from: currentTicket.status, to: status, nextStepOwnerId },
+			actor
+		);
+
+		if (await hasInactiveUser(tx, newlyAssignedUserIds(ownershipBefore, ownership))) {
+			return 'inactive_user';
 		}
 
 		const keepsResolution = currentTicket.status === 'resolved' && status === 'closed';
@@ -115,6 +139,8 @@ export async function updateTicketStatus(
 				resolutionSummary: nextResolutionSummary,
 				nextStep: nextStepValue,
 				nextStepDue: nextStepDueValue,
+				assigneeId: ownership.assigneeId,
+				nextStepOwnerId: ownership.nextStepOwnerId,
 				...(clearsAttention ? { attentionSince: null, attentionReason: null } : {})
 			})
 			.where(eq(tickets.id, ticketId));
@@ -129,6 +155,8 @@ export async function updateTicketStatus(
 			resolution: nextResolution,
 			resolutionSummary: nextResolutionSummary
 		});
+
+		await recordOwnershipChanges(tx, ticketId, ownershipBefore, ownership, actor, now);
 
 		if (clearsAttention && currentTicket.attentionReason) {
 			await tx.insert(ticketAttentionEvents).values({

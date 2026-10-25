@@ -107,3 +107,8 @@ export const ticketSources = ['manual', 'email', 'web', 'api'] as const;
  * Who made a change (ADR 0001).
  */
 export const actorTypes = ['user', 'system', 'ai'] as const;
+
+/**
+ * Ownership fields tracked in the assignment history (ADR 0008).
+ */
+export const assignmentFields = ['assignee', 'next_step_owner'] as const;

@@ -5,6 +5,7 @@ import { ticketViews } from '$lib/modules/tickets/ticket.constants';
 import { ticketStatusSchema } from '$lib/modules/tickets/ticket.validation';
 import { db } from '$lib/server/db';
 import { listTickets } from '$lib/server/tickets/list-tickets';
+import { listUsers } from '$lib/server/auth/users';
 import type { PageServerLoad } from './$types';
 
 const PAGE_SIZE = 10;
@@ -59,8 +60,11 @@ export const load = (async ({ url }) => {
 		pageSize: PAGE_SIZE
 	});
 
+	const users = await listUsers(db);
+
 	return {
 		tickets: result.tickets,
+		userNames: Object.fromEntries(users.map((user) => [user.id, user.name])),
 		selectedStatus: selectedStatus ?? '',
 		searchTerm,
 		view,

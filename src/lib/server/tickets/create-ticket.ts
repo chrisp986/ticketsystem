@@ -4,20 +4,32 @@ import { defaultNextStepDue, defaultNextSteps } from '../../modules/tickets/tick
 import type { Actor, CreateTicketInput } from '../../modules/tickets/ticket.types';
 import { ticketAttentionEvents } from '../db/schema/ticket-attention-events';
 import { tickets } from '../db/schema/tickets';
+import { hasInactiveUser, recordOwnershipChanges } from './ownership';
 
 export type Ticket = typeof tickets.$inferSelect;
 
+/**
+ * Creates a ticket, optionally assigned. The assignee also owns the triage step (ADR 0008).
+ */
 export async function createTicket(
 	database: NodePgDatabase,
 	input: CreateTicketInput,
 	actor: Actor,
 	now: Date = new Date()
-): Promise<Ticket> {
+): Promise<Ticket | 'inactive_user'> {
+	const assigneeId = input.assigneeId ?? null;
+
 	return database.transaction(async (tx) => {
+		if (assigneeId && (await hasInactiveUser(tx, [assigneeId]))) {
+			return 'inactive_user';
+		}
+
 		const [ticket] = await tx
 			.insert(tickets)
 			.values({
 				...input,
+				assigneeId,
+				nextStepOwnerId: assigneeId,
 				nextStep: defaultNextSteps.new,
 				nextStepDue: defaultNextStepDue('new', input.priority, now),
 				attentionSince: now,
@@ -37,6 +49,15 @@ export async function createTicket(
 			actorId: actor.id ?? null,
 			occurredAt: now
 		});
+
+		await recordOwnershipChanges(
+			tx,
+			ticket.id,
+			{ assigneeId: null, nextStepOwnerId: null },
+			{ assigneeId, nextStepOwnerId: assigneeId },
+			actor,
+			now
+		);
 
 		return ticket;
 	});
