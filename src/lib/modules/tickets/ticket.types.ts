@@ -10,7 +10,8 @@ import {
 	attentionReasons,
 	attentionEventTypes,
 	attentionClearTypes,
-	ticketViews
+	ticketViews,
+	ticketNoteKinds
 } from './ticket.constants';
 
 import type {
@@ -40,6 +41,8 @@ export type AttentionEventType = (typeof attentionEventTypes)[number];
 export type AttentionClearType = (typeof attentionClearTypes)[number];
 
 export type AssignmentField = (typeof assignmentFields)[number];
+
+export type TicketNoteKind = (typeof ticketNoteKinds)[number];
 
 export type TicketView = (typeof ticketViews)[number];
 

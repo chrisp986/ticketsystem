@@ -8,11 +8,13 @@ import type {
 	AttentionClearType,
 	AttentionEventType,
 	AttentionReason,
+	TicketNoteKind,
 	TicketResolution,
 	TicketStatus
 } from '../../modules/tickets/ticket.types';
 import { ticketAssignmentHistory } from '../db/schema/ticket-assignment-history';
 import { ticketAttentionEvents } from '../db/schema/ticket-attention-events';
+import { ticketNotes } from '../db/schema/ticket-notes';
 import { ticketStatusHistory } from '../db/schema/ticket-status-history';
 import type { TicketRecord } from '../db/schema/tickets';
 import { actorFromFields } from './actor-fields';
@@ -21,6 +23,7 @@ type EntryBase = { id: string; at: Date; actor: Actor };
 
 export type TimelineEntry =
 	| (EntryBase & { kind: 'created' })
+	| (EntryBase & { kind: 'note'; noteKind: TicketNoteKind; body: string })
 	| (EntryBase & {
 			kind: 'status';
 			previousStatus: TicketStatus;
@@ -46,13 +49,15 @@ export const TIMELINE_LIMIT = 50;
 
 /**
  * Order of entries written in the same transaction, which share a timestamp:
- * the ticket or status change first, then its ownership and attention effects.
+ * the ticket, then a note explaining the change, then the status change and
+ * its ownership and attention effects.
  */
 const kindOrder: Record<TimelineEntry['kind'], number> = {
 	created: 0,
-	status: 1,
-	assignment: 2,
-	attention: 3
+	note: 1,
+	status: 2,
+	assignment: 3,
+	attention: 4
 };
 
 /**
@@ -66,13 +71,19 @@ function writeOrder(entry: TimelineEntry): number {
 }
 
 /**
- * The most recent entries of a ticket's timeline, newest first (ADR 0009).
+ * The most recent entries of a ticket's timeline, newest first (ADR 0005, ADR 0009).
  */
 export async function loadTicketTimeline(
 	database: NodePgDatabase,
 	ticket: Pick<TicketRecord, 'id' | 'createdAt' | 'createdByType' | 'createdById' | 'createdByName'>
 ): Promise<TimelineEntry[]> {
-	const [statusRows, attentionRows, assignmentRows] = await Promise.all([
+	const [noteRows, statusRows, attentionRows, assignmentRows] = await Promise.all([
+		database
+			.select()
+			.from(ticketNotes)
+			.where(eq(ticketNotes.ticketId, ticket.id))
+			.orderBy(desc(ticketNotes.createdAt), desc(ticketNotes.id))
+			.limit(TIMELINE_LIMIT),
 		database
 			.select()
 			.from(ticketStatusHistory)
@@ -104,6 +115,14 @@ export async function loadTicketTimeline(
 				actorName: ticket.createdByName
 			})
 		},
+		...noteRows.map((row) => ({
+			kind: 'note' as const,
+			id: row.id,
+			at: row.createdAt,
+			actor: { type: 'user' as const, id: row.authorId },
+			noteKind: row.kind,
+			body: row.body
+		})),
 		...statusRows.map((row) => ({
 			kind: 'status' as const,
 			id: row.id,

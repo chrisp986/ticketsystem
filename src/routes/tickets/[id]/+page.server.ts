@@ -9,17 +9,20 @@ import { eq } from 'drizzle-orm';
 import { updateTicketStatus } from '$lib/server/tickets/update-ticket-status';
 import type { Actions, PageServerLoad } from './$types';
 import {
+	addTicketNoteSchema,
 	assignTicketSchema,
 	updateTicketStatusSchema,
 	markAttentionHandledSchema
 } from '$lib/modules/tickets/ticket.validation';
 import { markAttentionHandled } from '$lib/server/tickets/mark-attention-handled';
 import { assignTicket } from '$lib/server/tickets/assign-ticket';
+import { addTicketNote } from '$lib/server/tickets/add-ticket-note';
 import { loadTicketTimeline, TIMELINE_LIMIT } from '$lib/server/tickets/ticket-timeline';
 import { listUsers } from '$lib/server/auth/users';
 import { userActor } from '$lib/server/auth/actor';
 import { fromLocalInputValue } from '$lib/modules/time/local-datetime';
 import type { GuardBlockerCode } from '$lib/modules/tickets/ticket.guard';
+import { TICKET_NOTE_MAX_LENGTH } from '$lib/modules/tickets/ticket.constants';
 
 const ticketIdSchema = z.uuid();
 
@@ -35,7 +38,24 @@ const blockerMessages: Record<GuardBlockerCode, string> = {
 	human_required: 'Only a person can close a ticket.'
 };
 
+const noteInvalidMessage = `Choose a note kind and write a note of at most ${TICKET_NOTE_MAX_LENGTH.toLocaleString('en-GB')} characters.`;
+
 const inactiveUserMessage = 'Only active users can be assigned. Reload and choose again.';
+
+/**
+ * Reads the optional note of the status form: blank text means no note.
+ */
+function noteFields(
+	formData: FormData
+): { kind: FormDataEntryValue | null; body: string } | undefined {
+	const body = formData.get('noteBody');
+
+	if (typeof body !== 'string' || body.trim() === '') {
+		return undefined;
+	}
+
+	return { kind: formData.get('noteKind'), body };
+}
 
 /**
  * Reads an assignee or owner field: missing keeps the value, empty clears it.
@@ -101,12 +121,15 @@ export const actions = {
 			reason: typeof reasonValue === 'string' ? reasonValue : undefined,
 			nextStep: typeof nextStepValue === 'string' ? nextStepValue : undefined,
 			nextStepDue,
-			nextStepOwnerId: ownerField(formData, 'nextStepOwnerId')
+			nextStepOwnerId: ownerField(formData, 'nextStepOwnerId'),
+			note: noteFields(formData)
 		});
 
 		if (!result.success) {
 			return fail(400, {
-				message: 'Please select a valid status and reload if necessary.'
+				message: result.error.issues.some((issue) => issue.path[0] === 'note')
+					? noteInvalidMessage
+					: 'Please select a valid status and reload if necessary.'
 			});
 		}
 
@@ -114,7 +137,11 @@ export const actions = {
 			const outcome = await updateTicketStatus(db, result.data, userActor(locals.user));
 
 			if (outcome === 'unchanged') {
-				return { message: 'Status is already up to date.' };
+				return {
+					message: result.data.note
+						? 'Note added. The status is already up to date.'
+						: 'Status is already up to date.'
+				};
 			}
 
 			if (outcome === 'conflict') {
@@ -124,7 +151,7 @@ export const actions = {
 			}
 
 			if (outcome === 'updated') {
-				return { message: 'Status updated.' };
+				return { message: result.data.note ? 'Status updated and note added.' : 'Status updated.' };
 			}
 
 			if (outcome === 'inactive_user') {
@@ -142,6 +169,39 @@ export const actions = {
 			return fail(500, {
 				message: 'The status could not be saved. Please try again.'
 			});
+		}
+	},
+
+	addNote: async ({ request, params, locals }) => {
+		const formData = await request.formData();
+
+		const result = addTicketNoteSchema.safeParse({
+			ticketId: params.id,
+			kind: formData.get('kind'),
+			body: formData.get('body')
+		});
+
+		if (!result.success) {
+			return fail(400, { message: noteInvalidMessage });
+		}
+
+		try {
+			const outcome = await addTicketNote(db, result.data, userActor(locals.user));
+
+			if (outcome === 'not_found') {
+				return fail(404, { message: 'The ticket no longer exists.' });
+			}
+
+			return { message: 'Note added.' };
+		} catch (err) {
+			// The note text may contain customer data and is never logged (ADR 0005).
+			logger.error('failed to add ticket note', {
+				requestId: locals.requestId,
+				ticketId: params.id,
+				err
+			});
+
+			return fail(500, { message: 'The note could not be saved. Please try again.' });
 		}
 	},
 

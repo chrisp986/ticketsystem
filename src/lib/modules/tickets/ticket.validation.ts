@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 import {
+	TICKET_NOTE_MAX_LENGTH,
+	ticketNoteKinds,
 	ticketPriorities,
 	ticketSources,
 	ticketStatuses,
@@ -23,6 +25,14 @@ export const ticketResolutionSchema = z.enum(ticketResolutions);
  * An assignee or next-step owner. `null` clears the field, `undefined` keeps it.
  */
 export const ownerIdSchema = z.uuid().nullable().optional();
+
+/**
+ * A manual note: its kind and a non-blank text (ADR 0005).
+ */
+export const ticketNoteSchema = z.object({
+	kind: z.enum(ticketNoteKinds),
+	body: z.string().trim().min(1).max(TICKET_NOTE_MAX_LENGTH)
+});
 
 /**
  * Complete ticket.
@@ -86,7 +96,15 @@ export const updateTicketStatusSchema = z.object({
 	reason: z.string().trim().max(500).optional(),
 	nextStep: z.string().trim().max(500).optional(),
 	nextStepDue: z.date().optional(),
-	nextStepOwnerId: ownerIdSchema
+	nextStepOwnerId: ownerIdSchema,
+	note: ticketNoteSchema.optional()
+});
+
+/**
+ * Input for adding a note to a ticket. It does not change the ticket, so it needs no version.
+ */
+export const addTicketNoteSchema = ticketNoteSchema.extend({
+	ticketId: z.uuid()
 });
 
 /**
