@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-25
+- Amended: 2026-10-29 (views, see Decision)
 
 ## Context
 
@@ -19,6 +20,14 @@ ADR 0002 gives every open ticket a next step, but nobody is named for it. Since 
 - Only active users can become assignee or owner. Deactivating a user does not reassign their tickets; the UI marks them as inactive. Users referenced by a ticket or its history cannot be deleted.
 - Assigning a ticket does not change its status and does not clear attention (ADR 0002).
 - Only people assign tickets. The system and AI may later suggest an assignee, never set one.
+
+**Views (amendment 2026-10-29).** Step 2.5 adds three views to the ticket list. They show open tickets only and are sorted by how long a ticket has been waiting.
+
+- _My tickets_: I am the assignee or the next-step owner. A colleague who owns the next step of a `waiting_internal` ticket sees it too.
+- _My overdue_: the next step is overdue and mine. It is mine when I own it, or when nobody owns it and I am the assignee, so no overdue step is left without a person.
+- _Unassigned_: no assignee, including new tickets waiting for triage.
+
+The list opens on _My tickets_. Every view shows how many tickets it holds, regardless of the status filter and search.
 
 **History.** Every change of assignee or next-step owner is recorded in `ticket_assignment_history` with the field, the previous and new user, the actor type, the actor and the time. Actor IDs in this table are user IDs with a foreign key.
 

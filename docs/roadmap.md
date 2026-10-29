@@ -35,7 +35,7 @@ Done when: every status change passes the transition map and the guard, every op
 - [x] 2.2 Assignee and next-step owner
 - [x] 2.3 Actor recorded on every change, ticket timeline
 - [x] 2.4 Ticket notes (internal note, phone call, on site) in the ticket timeline
-- [ ] 2.5 Views: my tickets, unassigned, my overdue
+- [x] 2.5 Views: my tickets, unassigned, my overdue
 - [ ] 2.6 Baseline metrics
 
 Done when: every change has a human or system actor, every assigned ticket shows its owner, and the baseline metrics are recorded.

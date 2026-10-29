@@ -4,13 +4,17 @@ import { z } from 'zod';
 import { ticketViews } from '$lib/modules/tickets/ticket.constants';
 import { ticketStatusSchema } from '$lib/modules/tickets/ticket.validation';
 import { db } from '$lib/server/db';
-import { listTickets } from '$lib/server/tickets/list-tickets';
+import { countTicketViews, listTickets } from '$lib/server/tickets/list-tickets';
 import { listUsers } from '$lib/server/auth/users';
+import { userActor } from '$lib/server/auth/actor';
 import type { PageServerLoad } from './$types';
 
 const PAGE_SIZE = 10;
 const searchSchema = z.string().trim().max(200);
 const viewSchema = z.enum(ticketViews);
+
+// The list opens on the signed-in user's own work queue (ADR 0008).
+const defaultView = ticketViews[0];
 
 const pageSchema = z
 	.string()
@@ -18,7 +22,9 @@ const pageSchema = z
 	.transform(Number)
 	.pipe(z.number().int().min(1).max(100_000));
 
-export const load = (async ({ url }) => {
+export const load = (async ({ url, locals }) => {
+	const currentUserId = userActor(locals.user).id;
+
 	const statusParameter = url.searchParams.get('status');
 
 	const statusResult = ticketStatusSchema
@@ -41,7 +47,7 @@ export const load = (async ({ url }) => {
 		error(400, 'Search must be 200 characters or fewer.');
 	}
 
-	const viewResult = viewSchema.safeParse(url.searchParams.get('view') || 'all');
+	const viewResult = viewSchema.safeParse(url.searchParams.get('view') || defaultView);
 
 	if (!viewResult.success) {
 		error(400, 'Invalid view.');
@@ -52,15 +58,17 @@ export const load = (async ({ url }) => {
 	const page = pageResult.data;
 	const view = viewResult.data;
 
-	const result = await listTickets(db, {
-		status: selectedStatus,
-		searchTerm,
-		view,
-		page,
-		pageSize: PAGE_SIZE
-	});
+	const now = new Date();
 
-	const users = await listUsers(db);
+	const [result, viewCounts, users] = await Promise.all([
+		listTickets(
+			db,
+			{ status: selectedStatus, searchTerm, view, currentUserId, page, pageSize: PAGE_SIZE },
+			now
+		),
+		countTicketViews(db, currentUserId, now),
+		listUsers(db)
+	]);
 
 	return {
 		tickets: result.tickets,
@@ -68,6 +76,8 @@ export const load = (async ({ url }) => {
 		selectedStatus: selectedStatus ?? '',
 		searchTerm,
 		view,
+		defaultView,
+		viewCounts,
 		page,
 		hasPreviousPage: page > 1,
 		hasNextPage: result.hasNextPage
