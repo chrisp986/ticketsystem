@@ -78,6 +78,13 @@
       "when": 1792954363780,
       "tag": "0010_add_actors",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793299693395,
+      "tag": "0011_add_ticket_notes",
+      "breakpoints": true
     }
   ]
 }

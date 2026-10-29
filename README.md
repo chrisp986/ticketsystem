@@ -21,6 +21,7 @@ Phases 0 (Foundation) and 1 (Ticket lifecycle) are complete; Phase 2 (Users and 
 - Sign-in with email and password; every page except `/login` and the health endpoints requires it
 - Assignee and next-step owner per ticket, with an assignment history
 - Every change and every ticket records its actor (a user, the system or AI); the ticket page shows one timeline
+- Internal notes (internal note, phone call, on site) on any ticket, also together with a status change; they appear in the timeline
 
 Email, AI processing and human review are not implemented yet. See the [roadmap](docs/roadmap.md).
 

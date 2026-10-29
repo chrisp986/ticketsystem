@@ -15,6 +15,7 @@ import {
 	ownershipAfterStatusChange
 } from '../../modules/tickets/ticket.ownership';
 import { actorFields } from './actor-fields';
+import { insertTicketNote } from './add-ticket-note';
 import { hasInactiveUser, recordOwnershipChanges } from './ownership';
 
 type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
@@ -35,7 +36,8 @@ export async function updateTicketStatus(
 		reason,
 		nextStep,
 		nextStepDue,
-		nextStepOwnerId
+		nextStepOwnerId,
+		note
 	} = input;
 
 	return database.transaction(async (tx): Promise<UpdateTicketStatusResult> => {
@@ -62,11 +64,16 @@ export async function updateTicketStatus(
 			return 'conflict';
 		}
 
+		const now = new Date();
+
+		// A note sent with an unchanged status is still saved (ADR 0005).
 		if (currentTicket.status === status) {
+			if (note) {
+				await insertTicketNote(tx, ticketId, note, actor, now);
+			}
+
 			return 'unchanged';
 		}
-
-		const now = new Date();
 
 		const guard = checkStatusChange(
 			{ status: currentTicket.status, reopenCount: currentTicket.reopenCount },
@@ -145,6 +152,11 @@ export async function updateTicketStatus(
 				...(clearsAttention ? { attentionSince: null, attentionReason: null } : {})
 			})
 			.where(eq(tickets.id, ticketId));
+
+		if (note) {
+			await insertTicketNote(tx, ticketId, note, actor, now);
+		}
+
 		await tx.insert(ticketStatusHistory).values({
 			ticketId,
 			previousStatus: currentTicket.status,

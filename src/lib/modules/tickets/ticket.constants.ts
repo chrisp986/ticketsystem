@@ -129,3 +129,19 @@ export const assignmentFieldLabels = {
 	assignee: 'Assignee',
 	next_step_owner: 'Next-step owner'
 } satisfies Record<(typeof assignmentFields)[number], string>;
+
+/**
+ * Kinds of manual ticket notes (ADR 0005).
+ */
+export const ticketNoteKinds = ['internal_note', 'phone_call', 'on_site'] as const;
+
+export const ticketNoteKindLabels = {
+	internal_note: 'Internal note',
+	phone_call: 'Phone call',
+	on_site: 'On site'
+} satisfies Record<(typeof ticketNoteKinds)[number], string>;
+
+/**
+ * Longest note text, enforced in validation and the database (ADR 0005).
+ */
+export const TICKET_NOTE_MAX_LENGTH = 10000;

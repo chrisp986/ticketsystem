@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 
 import { ticketAssignmentHistory } from '../../../src/lib/server/db/schema/ticket-assignment-history';
 import { ticketAttentionEvents } from '../../../src/lib/server/db/schema/ticket-attention-events';
+import { ticketNotes } from '../../../src/lib/server/db/schema/ticket-notes';
 import { ticketStatusHistory } from '../../../src/lib/server/db/schema/ticket-status-history';
 import { tickets } from '../../../src/lib/server/db/schema/tickets';
 import { users } from '../../../src/lib/server/db/schema/users';
@@ -23,11 +24,12 @@ export const testDb = drizzle({ client: testPool });
 export const testCreator = { createdByType: 'system', createdByName: 'integration-test' } as const;
 
 /**
- * Deletes a test ticket together with its attention events, status and assignment history.
+ * Deletes a test ticket together with its notes, attention events, status and assignment history.
  *
  * They reference the ticket with `restrict`, so they must be deleted first.
  */
 export async function deleteTestTicket(ticketId: string) {
+	await testDb.delete(ticketNotes).where(eq(ticketNotes.ticketId, ticketId));
 	await testDb
 		.delete(ticketAssignmentHistory)
 		.where(eq(ticketAssignmentHistory.ticketId, ticketId));

@@ -8,7 +8,10 @@
 		attentionReasonLabels,
 		attentionClearTypeLabels,
 		actorTypeLabels,
-		assignmentFieldLabels
+		assignmentFieldLabels,
+		ticketNoteKinds,
+		ticketNoteKindLabels,
+		TICKET_NOTE_MAX_LENGTH
 	} from '$lib/modules/tickets/ticket.constants';
 	import { allowedTransitions } from '$lib/modules/tickets/ticket.transitions';
 	import { resolve } from '$app/paths';
@@ -207,6 +210,16 @@
 
 		<label for="reason">Reason (optional)</label>
 		<input id="reason" name="reason" maxlength="500" />
+
+		<label for="statusNoteKind">Note kind</label>
+		<select id="statusNoteKind" name="noteKind">
+			{#each ticketNoteKinds as kind (kind)}
+				<option value={kind}>{ticketNoteKindLabels[kind]}</option>
+			{/each}
+		</select>
+
+		<label for="statusNoteBody">Note (optional, internal)</label>
+		<textarea id="statusNoteBody" name="noteBody" maxlength={TICKET_NOTE_MAX_LENGTH}></textarea>
 		{#if needsResolution}
 			<label for="resolution">Resolution</label>
 			<select id="resolution" name="resolution" required bind:value={selectedResolution}>
@@ -245,6 +258,26 @@
 	<p>Closed tickets cannot be changed.</p>
 {/if}
 
+<section aria-labelledby="note-heading">
+	<h2 id="note-heading">Add a note</h2>
+
+	<p>Notes are internal and never sent to the customer. They cannot be edited later.</p>
+
+	<form method="POST" action="?/addNote">
+		<label for="noteKind">Kind</label>
+		<select id="noteKind" name="kind">
+			{#each ticketNoteKinds as kind (kind)}
+				<option value={kind}>{ticketNoteKindLabels[kind]}</option>
+			{/each}
+		</select>
+
+		<label for="noteBody">Note</label>
+		<textarea id="noteBody" name="body" maxlength={TICKET_NOTE_MAX_LENGTH} required></textarea>
+
+		<button type="submit">Add note</button>
+	</form>
+</section>
+
 <section aria-labelledby="timeline-heading">
 	<h2 id="timeline-heading">Timeline</h2>
 
@@ -255,6 +288,8 @@
 			<li>
 				{#if entry.kind === 'created'}
 					<span>Ticket created</span>
+				{:else if entry.kind === 'note'}
+					<span>{ticketNoteKindLabels[entry.noteKind]}</span>
 				{:else if entry.kind === 'status'}
 					<span>
 						Status: {ticketStatusLabels[entry.previousStatus]}
@@ -283,7 +318,9 @@
 
 				<time datetime={entry.at.toISOString()}>{formatLocalDateTime(entry.at)}</time>
 
-				{#if entry.kind === 'status'}
+				{#if entry.kind === 'note'}
+					<p class="description">{entry.body}</p>
+				{:else if entry.kind === 'status'}
 					{#if entry.resolution}
 						<p>Resolution: {ticketResolutionLabels[entry.resolution]}</p>
 					{/if}
