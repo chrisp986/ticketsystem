@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm';
 import { boolean, check, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
+import { notBlank } from './not-blank';
+
 /**
  * Agents who can sign in (ADR 0007).
  */
@@ -34,7 +36,7 @@ export const users = pgTable(
 	(table) => [
 		uniqueIndex('users_email_unique').on(table.email),
 		check('users_email_lower_case', sql`${table.email} = lower(${table.email})`),
-		check('users_name_not_blank', sql`btrim(${table.name}) <> ''`)
+		check('users_name_not_blank', notBlank(table.name))
 	]
 );
 

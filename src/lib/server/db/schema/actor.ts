@@ -4,6 +4,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { actorTypes } from '$lib/modules/tickets/ticket.constants';
 
+import { notBlank } from './not-blank';
 import { users } from './users';
 
 export const actorType = pgEnum('actor_type', actorTypes);
@@ -33,6 +34,6 @@ export function actorCheck(
 ) {
 	return check(
 		name,
-		sql`(${type} = 'user' AND ${id} IS NOT NULL AND ${actorName} IS NULL) OR (${type} <> 'user' AND ${id} IS NULL AND ${actorName} IS NOT NULL AND btrim(${actorName}) <> '' AND ${actorName} = lower(${actorName}) AND char_length(${actorName}) <= 100)`
+		sql`(${type} = 'user' AND ${id} IS NOT NULL AND ${actorName} IS NULL) OR (${type} <> 'user' AND ${id} IS NULL AND ${actorName} IS NOT NULL AND ${notBlank(actorName)} AND ${actorName} = lower(${actorName}) AND char_length(${actorName}) <= 100)`
 	);
 }

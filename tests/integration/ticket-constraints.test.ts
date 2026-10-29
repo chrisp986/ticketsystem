@@ -141,6 +141,25 @@ test('rejects a resolved ticket without a summary', async () => {
 	});
 });
 
+test('rejects a resolved ticket whose summary is only whitespace', async () => {
+	await expect(
+		testDb
+			.insert(tickets)
+			.values({
+				...testCreator,
+				subject: 'Constraint test: resolved with a blank summary',
+				status: 'resolved',
+				resolvedAt: someTime,
+				firstResolvedAt: someTime,
+				resolution: 'solved',
+				resolutionSummary: '\n\t '
+			})
+			.execute()
+	).rejects.toMatchObject({
+		cause: { code: '23514', constraint: 'tickets_resolved_has_resolution_and_summary' }
+	});
+});
+
 test('rejects a closed ticket without a resolution', async () => {
 	await expect(
 		testDb

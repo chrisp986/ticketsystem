@@ -11,6 +11,7 @@ import {
 } from '$lib/modules/tickets/ticket.constants';
 
 import { actorCheck, actorType } from './actor';
+import { notBlank } from './not-blank';
 import { users } from './users';
 
 /**
@@ -155,7 +156,7 @@ export const tickets = pgTable(
 		),
 		check(
 			'tickets_resolved_has_resolution_and_summary',
-			sql`${table.status} <> 'resolved' OR (${table.resolution} IS NOT NULL AND ${table.resolution} IN ('solved', 'workaround') AND ${table.resolutionSummary} IS NOT NULL AND btrim(${table.resolutionSummary}) <> '')`
+			sql`${table.status} <> 'resolved' OR (${table.resolution} IS NOT NULL AND ${table.resolution} IN ('solved', 'workaround') AND ${table.resolutionSummary} IS NOT NULL AND ${notBlank(table.resolutionSummary)})`
 		),
 		check(
 			'tickets_closed_has_resolution',
