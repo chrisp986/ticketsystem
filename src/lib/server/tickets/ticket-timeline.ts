@@ -1,6 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
+import { assignmentFields } from '../../modules/tickets/ticket.constants';
 import type {
 	Actor,
 	AssignmentField,
@@ -55,6 +56,16 @@ const kindOrder: Record<TimelineEntry['kind'], number> = {
 };
 
 /**
+ * Position of an entry within its transaction. Assignment rows follow the order
+ * `recordOwnershipChanges` writes them in: assignee, then next-step owner.
+ */
+function writeOrder(entry: TimelineEntry): number {
+	const fieldOrder = entry.kind === 'assignment' ? assignmentFields.indexOf(entry.field) : 0;
+
+	return kindOrder[entry.kind] * assignmentFields.length + fieldOrder;
+}
+
+/**
  * The most recent entries of a ticket's timeline, newest first (ADR 0009).
  */
 export async function loadTicketTimeline(
@@ -66,19 +77,19 @@ export async function loadTicketTimeline(
 			.select()
 			.from(ticketStatusHistory)
 			.where(eq(ticketStatusHistory.ticketId, ticket.id))
-			.orderBy(desc(ticketStatusHistory.changedAt))
+			.orderBy(desc(ticketStatusHistory.changedAt), desc(ticketStatusHistory.id))
 			.limit(TIMELINE_LIMIT),
 		database
 			.select()
 			.from(ticketAttentionEvents)
 			.where(eq(ticketAttentionEvents.ticketId, ticket.id))
-			.orderBy(desc(ticketAttentionEvents.occurredAt))
+			.orderBy(desc(ticketAttentionEvents.occurredAt), desc(ticketAttentionEvents.id))
 			.limit(TIMELINE_LIMIT),
 		database
 			.select()
 			.from(ticketAssignmentHistory)
 			.where(eq(ticketAssignmentHistory.ticketId, ticket.id))
-			.orderBy(desc(ticketAssignmentHistory.changedAt))
+			.orderBy(desc(ticketAssignmentHistory.changedAt), desc(ticketAssignmentHistory.id))
 			.limit(TIMELINE_LIMIT)
 	]);
 
@@ -125,6 +136,11 @@ export async function loadTicketTimeline(
 	];
 
 	return entries
-		.sort((a, b) => b.at.getTime() - a.at.getTime() || kindOrder[b.kind] - kindOrder[a.kind])
+		.sort(
+			(a, b) =>
+				b.at.getTime() - a.at.getTime() ||
+				writeOrder(b) - writeOrder(a) ||
+				(a.id < b.id ? 1 : a.id > b.id ? -1 : 0)
+		)
 		.slice(0, TIMELINE_LIMIT);
 }

@@ -1,3 +1,29 @@
+-- ADR 0009: rows written before sign-in have no valid actor and must be removed by hand before this migration runs.
+DO $$
+DECLARE
+	"invalid_rows" bigint;
+BEGIN
+	SELECT
+		(SELECT count(*) FROM "ticket_status_history" AS "h"
+			WHERE "h"."actor_type" <> 'user'
+				OR NOT EXISTS (SELECT 1 FROM "users" WHERE "users"."id"::text = lower("h"."actor_id")))
+		+ (SELECT count(*) FROM "ticket_attention_events" AS "e"
+			WHERE "e"."actor_type" <> 'user'
+				OR NOT EXISTS (SELECT 1 FROM "users" WHERE "users"."id"::text = lower("e"."actor_id")))
+		+ (SELECT count(*) FROM "ticket_assignment_history"
+			WHERE "actor_type" <> 'user' OR "actor_id" IS NULL)
+		+ (SELECT count(*) FROM "tickets" AS "t"
+			WHERE NOT EXISTS (
+				SELECT 1 FROM "ticket_attention_events" AS "e"
+				WHERE "e"."ticket_id" = "t"."id" AND "e"."event_type" = 'raised' AND "e"."reason" = 'new_ticket'
+			))
+	INTO "invalid_rows";
+
+	IF "invalid_rows" > 0 THEN
+		RAISE EXCEPTION '% rows have no valid actor (ADR 0009)', "invalid_rows"
+			USING HINT = 'History rows need actor type user and the ID of an existing user, and every ticket needs a new_ticket attention event. Delete or fix these rows, then run the migration again.';
+	END IF;
+END $$;--> statement-breakpoint
 ALTER TABLE "ticket_attention_events" ALTER COLUMN "actor_id" SET DATA TYPE uuid USING "actor_id"::uuid;--> statement-breakpoint
 ALTER TABLE "ticket_status_history" ALTER COLUMN "actor_id" SET DATA TYPE uuid USING "actor_id"::uuid;--> statement-breakpoint
 ALTER TABLE "ticket_assignment_history" ADD COLUMN "actor_name" text;--> statement-breakpoint
