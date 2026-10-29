@@ -4,9 +4,9 @@ import type { z } from 'zod';
 
 import type { Actor } from '../../modules/tickets/ticket.types';
 import type { markAttentionHandledSchema } from '../../modules/tickets/ticket.validation';
-import { actorFields } from './actor-fields';
 import { ticketAttentionEvents } from '../db/schema/ticket-attention-events';
 import { tickets } from '../db/schema/tickets';
+import { actorFields } from './actor-fields';
 
 type MarkAttentionHandledInput = z.infer<typeof markAttentionHandledSchema>;
 
