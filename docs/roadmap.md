@@ -118,3 +118,5 @@ Done when: actions per ticket are below the Phase 2 baseline.
 - Optional `db:test:up` script to start and migrate the test database
 - Recalculate the due date when a ticket's priority changes (once priority can be edited)
 - Edit the next step without changing the status
+- Rate-limit failed sign-ins; required before the app is reachable from outside the local network (ADR 0007)
+- Password reset and user deactivation without SQL (ADR 0007)

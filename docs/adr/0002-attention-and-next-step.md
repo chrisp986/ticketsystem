@@ -28,7 +28,7 @@ A ticket's status says where it is in the workflow, but not whether a human must
 | `waiting_internal` | Entered by the agent, required          |
 | `resolved`         | Await confirmation, then close          |
 
-An overdue next step raises attention with reason `next_step_overdue`. Overdue tickets can be listed with a query, without a job queue.
+An overdue next step raises attention with reason `next_step_overdue`; this needs the background worker and is roadmap step 3.5. Until then, overdue tickets are listed with a query, without a job queue.
 
 **Amendment (2026-10-25).** This ADR first allowed "a next step due date or attention". Step 1.5 implemented the stricter rule above (`tickets_open_has_next_step_due`), and ADR 0006 builds on it; the text now matches.
 
