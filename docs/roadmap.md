@@ -2,7 +2,7 @@
 
 Goal: a professional, AI-driven ticket system that reduces agent work to a minimum while humans keep every operational decision.
 
-North-star metric: agent actions and time per ticket, falling from the Phase 2 baseline.
+North-star metric: agent actions and elapsed time per ticket, falling from the Phase 2 baseline ([ADR 0010](adr/0010-baseline-metrics.md)).
 
 Each step is sized to roughly one pull request. A phase is done when its acceptance criteria hold and are covered by tests.
 
@@ -29,14 +29,15 @@ Done when: every path to invalid data is closed, errors are traceable from scree
 
 Done when: every status change passes the transition map and the guard, every open ticket has a next step with a due date, and only a person closes a ticket.
 
-## Phase 2: Users and ownership ([ADR 0005](adr/0005-ticket-notes.md), [ADR 0007](adr/0007-authentication-and-sessions.md), [ADR 0008](adr/0008-ticket-ownership.md), [ADR 0009](adr/0009-actors.md))
+## Phase 2: Users and ownership ([ADR 0005](adr/0005-ticket-notes.md), [ADR 0007](adr/0007-authentication-and-sessions.md), [ADR 0008](adr/0008-ticket-ownership.md), [ADR 0009](adr/0009-actors.md), [ADR 0010](adr/0010-baseline-metrics.md))
 
 - [x] 2.1 Session authentication and users
 - [x] 2.2 Assignee and next-step owner
 - [x] 2.3 Actor recorded on every change, ticket timeline
 - [x] 2.4 Ticket notes (internal note, phone call, on site) in the ticket timeline
 - [x] 2.5 Views: my tickets, unassigned, my overdue
-- [ ] 2.6 Baseline metrics
+- [x] 2.6 Metrics report
+- [ ] 2.7 Record the baseline after real use (about 30 closed tickets)
 
 Done when: every change has a human or system actor, every assigned ticket shows its owner, and the baseline metrics are recorded.
 
@@ -120,3 +121,4 @@ Done when: actions per ticket are below the Phase 2 baseline.
 - Edit the next step without changing the status
 - Rate-limit failed sign-ins; required before the app is reachable from outside the local network (ADR 0007)
 - Password reset and user deactivation without SQL (ADR 0007)
+- Metrics page for admins; needs an admin role (ADR 0010)

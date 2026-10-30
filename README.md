@@ -109,6 +109,7 @@ pnpm validate
 | `pnpm db:migrate`       | Apply migrations to the development database |
 | `pnpm db:test:migrate`  | Apply migrations to the test database        |
 | `pnpm user:create`      | Create a user who can sign in                |
+| `pnpm metrics:report`   | Print the metrics of a period (ADR 0010)     |
 
 ## Running in production mode
 
