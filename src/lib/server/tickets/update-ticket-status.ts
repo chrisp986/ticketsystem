@@ -64,16 +64,11 @@ export async function updateTicketStatus(
 			return 'conflict';
 		}
 
-		const now = new Date();
-
-		// A note sent with an unchanged status is still saved (ADR 0005).
 		if (currentTicket.status === status) {
-			if (note) {
-				await insertTicketNote(tx, ticketId, note, actor, now);
-			}
-
 			return 'unchanged';
 		}
+
+		const now = new Date();
 
 		const guard = checkStatusChange(
 			{ status: currentTicket.status, reopenCount: currentTicket.reopenCount },

@@ -284,7 +284,7 @@ describe('a note with a status change', () => {
 		expect(await notesOf(ticket.id)).toHaveLength(0);
 	});
 
-	test('is saved when the status does not change', async () => {
+	test('is not saved when the status does not change', async () => {
 		const anna = await agent();
 		const ticket = await create(anna);
 
@@ -300,7 +300,7 @@ describe('a note with a status change', () => {
 		);
 
 		expect(outcome).toBe('unchanged');
-		expect(await notesOf(ticket.id)).toHaveLength(1);
+		expect(await notesOf(ticket.id)).toHaveLength(0);
 		expect(await storedTicket(ticket.id)).toMatchObject({ version: ticket.version });
 	});
 });
