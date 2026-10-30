@@ -92,6 +92,13 @@
       "when": 1793308079671,
       "tag": "0012_require_non_blank_text",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793368726423,
+      "tag": "0013_add_jobs",
+      "breakpoints": true
     }
   ]
 }

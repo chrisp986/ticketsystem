@@ -41,9 +41,9 @@ Done when: every status change passes the transition map and the guard, every op
 
 Done when: every change has a human or system actor, every assigned ticket shows its owner, and the baseline metrics are recorded.
 
-## Phase 3: Background jobs ([ADR 0003](adr/0003-background-jobs-and-worker.md))
+## Phase 3: Background jobs ([ADR 0003](adr/0003-background-jobs-and-worker.md), [ADR 0011](adr/0011-job-queue-details.md))
 
-- [ ] 3.1 `jobs` and `job_attempts` tables
+- [x] 3.1 `jobs` and `job_attempts` tables
 - [ ] 3.2 Worker process claiming jobs with `FOR UPDATE SKIP LOCKED`
 - [ ] 3.3 Retries, backoff, dead-letter state
 - [ ] 3.4 Stale-lock recovery
