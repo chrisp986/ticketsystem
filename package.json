@@ -20,7 +20,8 @@
 		"validate": "pnpm check && pnpm lint && pnpm test && pnpm test:integration && pnpm build",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"user:create": "tsx scripts/create-user.ts"
+		"user:create": "tsx scripts/create-user.ts",
+		"metrics:report": "tsx scripts/metrics-report.ts"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

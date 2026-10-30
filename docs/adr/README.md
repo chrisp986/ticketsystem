@@ -13,6 +13,7 @@ An ADR records one significant design decision: the context, the decision and it
 | [0007](0007-authentication-and-sessions.md) | Authentication and sessions        | Accepted |
 | [0008](0008-ticket-ownership.md)            | Ticket ownership                   | Accepted |
 | [0009](0009-actors.md)                      | Actors                             | Accepted |
+| [0010](0010-baseline-metrics.md)            | Baseline metrics                   | Accepted |
 
 ## Template
 
