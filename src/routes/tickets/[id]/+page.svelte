@@ -211,15 +211,17 @@
 		<label for="reason">Reason (optional)</label>
 		<input id="reason" name="reason" maxlength="500" />
 
-		<label for="statusNoteKind">Note kind</label>
-		<select id="statusNoteKind" name="noteKind">
-			{#each ticketNoteKinds as kind (kind)}
-				<option value={kind}>{ticketNoteKindLabels[kind]}</option>
-			{/each}
-		</select>
+		{#if selectedStatus !== data.ticket.status}
+			<label for="statusNoteKind">Note kind</label>
+			<select id="statusNoteKind" name="noteKind">
+				{#each ticketNoteKinds as kind (kind)}
+					<option value={kind}>{ticketNoteKindLabels[kind]}</option>
+				{/each}
+			</select>
 
-		<label for="statusNoteBody">Note (optional, internal)</label>
-		<textarea id="statusNoteBody" name="noteBody" maxlength={TICKET_NOTE_MAX_LENGTH}></textarea>
+			<label for="statusNoteBody">Note (optional, internal)</label>
+			<textarea id="statusNoteBody" name="noteBody" maxlength={TICKET_NOTE_MAX_LENGTH}></textarea>
+		{/if}
 		{#if needsResolution}
 			<label for="resolution">Resolution</label>
 			<select id="resolution" name="resolution" required bind:value={selectedResolution}>

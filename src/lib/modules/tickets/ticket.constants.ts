@@ -10,15 +10,26 @@
  */
 
 /**
- * Views of the ticket list.
+ * Views of the ticket list. The first one is the default (ADR 0008).
  */
-export const ticketViews = ['all', 'action', 'attention', 'overdue'] as const;
+export const ticketViews = [
+	'mine',
+	'my_overdue',
+	'unassigned',
+	'action',
+	'attention',
+	'overdue',
+	'all'
+] as const;
 
 export const ticketViewLabels = {
-	all: 'All tickets',
+	mine: 'My tickets',
+	my_overdue: 'My overdue',
+	unassigned: 'Unassigned',
 	action: 'Needs action',
 	attention: 'Needs attention',
-	overdue: 'Overdue'
+	overdue: 'Overdue',
+	all: 'All tickets'
 } satisfies Record<(typeof ticketViews)[number], string>;
 
 /**

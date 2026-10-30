@@ -137,11 +137,7 @@ export const actions = {
 			const outcome = await updateTicketStatus(db, result.data, userActor(locals.user));
 
 			if (outcome === 'unchanged') {
-				return {
-					message: result.data.note
-						? 'Note added. The status is already up to date.'
-						: 'Status is already up to date.'
-				};
+				return { message: 'Status is already up to date.' };
 			}
 
 			if (outcome === 'conflict') {

@@ -21,7 +21,7 @@
 	function pageUrl(page: number): `?${string}` {
 		const params = new SvelteURLSearchParams();
 
-		if (data.view !== 'all') {
+		if (data.view !== data.defaultView) {
 			params.set('view', data.view);
 		}
 
@@ -72,7 +72,9 @@
 	<label for="view-filter">Show</label>
 	<select id="view-filter" name="view">
 		{#each ticketViews as view (view)}
-			<option value={view} selected={data.view === view}>{ticketViewLabels[view]}</option>
+			<option value={view} selected={data.view === view}>
+				{ticketViewLabels[view]} ({data.viewCounts[view]})
+			</option>
 		{/each}
 	</select>
 
@@ -115,9 +117,11 @@
 		<a href={resolve(`/${pageUrl(1)}`)}>Go to the first page</a>
 	{:else}
 		<p>
-			{data.selectedStatus || data.searchTerm || data.view !== 'all'
-				? 'No tickets match your search and filters.'
-				: 'No tickets yet.'}
+			{data.selectedStatus || data.searchTerm
+				? `No tickets in "${ticketViewLabels[data.view]}" match your search and filters.`
+				: data.view === 'all'
+					? 'No tickets yet.'
+					: `No tickets in "${ticketViewLabels[data.view]}".`}
 		</p>
 	{/if}
 {/each}

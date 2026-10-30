@@ -63,6 +63,12 @@ test('the database rejects emails that are not lower case', async () => {
 	).rejects.toThrow();
 });
 
+test('the database rejects a name of only whitespace', async () => {
+	await expect(
+		testDb.insert(users).values({ email: 'blank@example.com', name: ' \n\t', passwordHash: 'x' })
+	).rejects.toMatchObject({ cause: { code: '23514', constraint: 'users_name_not_blank' } });
+});
+
 test('the right password signs in', async () => {
 	const user = await createTestUser();
 

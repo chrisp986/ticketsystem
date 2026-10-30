@@ -85,6 +85,13 @@
       "when": 1793299693395,
       "tag": "0011_add_ticket_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793308079671,
+      "tag": "0012_require_non_blank_text",
+      "breakpoints": true
     }
   ]
 }

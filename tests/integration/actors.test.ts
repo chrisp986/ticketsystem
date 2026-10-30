@@ -85,6 +85,7 @@ const invalidActors = [
 	['the system without a name', { type: 'system', id: null, name: null }],
 	['the system with a user ID', { type: 'system', id: 'anna', name: 'email-sync' }],
 	['a blank name', { type: 'system', id: null, name: '  ' }],
+	['a name of newlines and tabs', { type: 'system', id: null, name: '\n\t' }],
 	['an upper-case name', { type: 'ai', id: null, name: 'Email-Sync' }],
 	['a name over 100 characters', { type: 'ai', id: null, name: 'a'.repeat(101) }]
 ] as const;

@@ -3,6 +3,7 @@ import { check, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-or
 
 import { TICKET_NOTE_MAX_LENGTH, ticketNoteKinds } from '$lib/modules/tickets/ticket.constants';
 
+import { notBlank } from './not-blank';
 import { tickets } from './tickets';
 import { users } from './users';
 
@@ -39,8 +40,7 @@ export const ticketNotes = pgTable(
 		index('ticket_notes_ticket_id_created_at_idx').on(table.ticketId, table.createdAt),
 		check(
 			'ticket_notes_body_valid',
-			// `btrim` strips only spaces, so a regular expression rejects text of any whitespace.
-			sql`${table.body} ~ '[^[:space:]]' AND char_length(${table.body}) <= ${sql.raw(String(TICKET_NOTE_MAX_LENGTH))}`
+			sql`${notBlank(table.body)} AND char_length(${table.body}) <= ${sql.raw(String(TICKET_NOTE_MAX_LENGTH))}`
 		)
 	]
 );
