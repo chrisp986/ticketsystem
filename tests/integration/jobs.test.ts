@@ -167,6 +167,11 @@ describe('job constraints', () => {
 			'jobs_finished_at_matches_status'
 		],
 		['more attempts than allowed', { attempts: 6, maxAttempts: 5 }, 'jobs_attempts_within_limit'],
+		[
+			'a queued job without attempts left',
+			{ attempts: 5, maxAttempts: 5 },
+			'jobs_queued_has_attempts_left'
+		],
 		['negative attempts', { attempts: -1 }, 'jobs_attempts_within_limit'],
 		['no allowed attempts', { attempts: 0, maxAttempts: 0 }, 'jobs_attempts_within_limit'],
 		['a blank type', { type: ' \n ' }, 'jobs_type_not_blank'],

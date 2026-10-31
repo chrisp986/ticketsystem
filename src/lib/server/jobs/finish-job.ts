@@ -1,8 +1,11 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
+import { jobRetryDelayMs } from '../../modules/jobs/job.backoff';
 import { JOB_ERROR_MAX_LENGTH } from '../../modules/jobs/job.constants';
 import { jobAttempts, jobs } from '../db/schema/jobs';
+
+type Transaction = Parameters<Parameters<NodePgDatabase['transaction']>[0]>[0];
 
 /**
  * The try being finished, as its worker knows it.
@@ -13,51 +16,34 @@ export type JobClaim = {
 	attemptNumber: number;
 };
 
-type FinishOutcome = 'recorded' | 'lock_lost';
+export type JobFailureOutcome =
+	{ outcome: 'retrying'; runAt: Date } | { outcome: 'dead' } | { outcome: 'lock_lost' };
 
-async function finishJob(
-	database: NodePgDatabase,
+function heldBy(claim: JobClaim) {
+	return and(
+		eq(jobs.id, claim.jobId),
+		eq(jobs.status, 'running'),
+		eq(jobs.lockedBy, claim.workerId),
+		eq(jobs.attempts, claim.attemptNumber)
+	);
+}
+
+async function closeAttempt(
+	tx: Transaction,
 	claim: JobClaim,
-	result: { status: 'succeeded' | 'dead'; outcome: 'succeeded' | 'failed'; error: string | null },
+	result: { outcome: 'succeeded' | 'failed'; error: string | null },
 	now: Date
-): Promise<FinishOutcome> {
-	return database.transaction(async (tx) => {
-		const [finished] = await tx
-			.update(jobs)
-			.set({
-				status: result.status,
-				lockedBy: null,
-				lockedUntil: null,
-				finishedAt: now,
-				updatedAt: now
-			})
-			.where(
-				and(
-					eq(jobs.id, claim.jobId),
-					eq(jobs.status, 'running'),
-					eq(jobs.lockedBy, claim.workerId),
-					eq(jobs.attempts, claim.attemptNumber)
-				)
+): Promise<void> {
+	await tx
+		.update(jobAttempts)
+		.set({ finishedAt: now, ...result })
+		.where(
+			and(
+				eq(jobAttempts.jobId, claim.jobId),
+				eq(jobAttempts.attemptNumber, claim.attemptNumber),
+				isNull(jobAttempts.outcome)
 			)
-			.returning({ id: jobs.id });
-
-		if (!finished) {
-			return 'lock_lost';
-		}
-
-		await tx
-			.update(jobAttempts)
-			.set({ finishedAt: now, outcome: result.outcome, error: result.error })
-			.where(
-				and(
-					eq(jobAttempts.jobId, claim.jobId),
-					eq(jobAttempts.attemptNumber, claim.attemptNumber),
-					isNull(jobAttempts.outcome)
-				)
-			);
-
-		return 'recorded';
-	});
+		);
 }
 
 /**
@@ -68,30 +54,73 @@ export async function recordJobSuccess(
 	database: NodePgDatabase,
 	claim: JobClaim,
 	now: Date = new Date()
-): Promise<FinishOutcome> {
-	return finishJob(
-		database,
-		claim,
-		{ status: 'succeeded', outcome: 'succeeded', error: null },
-		now
-	);
+): Promise<'recorded' | 'lock_lost'> {
+	return database.transaction(async (tx) => {
+		const [finished] = await tx
+			.update(jobs)
+			.set({
+				status: 'succeeded',
+				lockedBy: null,
+				lockedUntil: null,
+				finishedAt: now,
+				updatedAt: now
+			})
+			.where(heldBy(claim))
+			.returning({ id: jobs.id });
+
+		if (!finished) {
+			return 'lock_lost';
+		}
+
+		await closeAttempt(tx, claim, { outcome: 'succeeded', error: null }, now);
+
+		return 'recorded';
+	});
 }
 
 /**
- * Records a failed try. The job is dead until retries exist (step 3.3).
+ * Records a failed try. The job waits and returns to the queue while it has attempts left;
+ * otherwise, or with `retry: false` for a failure that retrying cannot fix, it is dead.
  *
  * The error is stored for operators and must not contain customer data (ADR 0011).
  */
 export async function recordJobFailure(
 	database: NodePgDatabase,
 	claim: JobClaim,
-	error: string,
+	failure: { error: string; retry: boolean },
 	now: Date = new Date()
-): Promise<FinishOutcome> {
-	return finishJob(
-		database,
-		claim,
-		{ status: 'dead', outcome: 'failed', error: error.slice(0, JOB_ERROR_MAX_LENGTH) },
-		now
-	);
+): Promise<JobFailureOutcome> {
+	return database.transaction(async (tx): Promise<JobFailureOutcome> => {
+		const [held] = await tx
+			.select({ maxAttempts: jobs.maxAttempts })
+			.from(jobs)
+			.where(heldBy(claim))
+			.for('update');
+
+		if (!held) {
+			return { outcome: 'lock_lost' };
+		}
+
+		const released = { lockedBy: null, lockedUntil: null, updatedAt: now };
+		const retry = failure.retry && claim.attemptNumber < held.maxAttempts;
+		const runAt = new Date(now.getTime() + jobRetryDelayMs(claim.attemptNumber));
+
+		await tx
+			.update(jobs)
+			.set(
+				retry
+					? { ...released, status: 'queued', runAt }
+					: { ...released, status: 'dead', finishedAt: now }
+			)
+			.where(eq(jobs.id, claim.jobId));
+
+		await closeAttempt(
+			tx,
+			claim,
+			{ outcome: 'failed', error: failure.error.slice(0, JOB_ERROR_MAX_LENGTH) },
+			now
+		);
+
+		return retry ? { outcome: 'retrying', runAt } : { outcome: 'dead' };
+	});
 }

@@ -88,7 +88,7 @@ describe('running jobs', () => {
 		expect(handler).toHaveBeenCalledExactlyOnceWith({}, { db });
 	});
 
-	test('records a failing handler and keeps running', async () => {
+	test('retries a failing handler later and keeps running', async () => {
 		const failing = await insertJob({ runAt: new Date(Date.now() - 1000) });
 		const next = await insertJob();
 		const handler = vi
@@ -99,10 +99,34 @@ describe('running jobs', () => {
 		start(handler);
 
 		await vi.waitFor(async () => expect(await statusOf(next.id)).toBe('succeeded'));
-		expect(await statusOf(failing.id)).toBe('dead');
+		expect(await statusOf(failing.id)).toBe('queued');
 		expect(await attemptsOf(failing.id)).toMatchObject([
 			{ outcome: 'failed', error: 'The mail server is down.' }
 		]);
+		expect(logger.warn).toHaveBeenCalledWith(
+			'job failed, will retry',
+			expect.objectContaining({ jobId: failing.id, nextRunAt: expect.any(String) })
+		);
+
+		// The wait is over: the next attempt succeeds.
+		await testDb.update(jobs).set({ runAt: new Date() }).where(eq(jobs.id, failing.id));
+
+		await vi.waitFor(async () => expect(await statusOf(failing.id)).toBe('succeeded'));
+		expect(await attemptsOf(failing.id)).toHaveLength(2);
+	});
+
+	test('logs an error when the last attempt fails', async () => {
+		const job = await insertJob({ maxAttempts: 1 });
+
+		start(async () => {
+			throw new Error('The mail server is down.');
+		});
+
+		await vi.waitFor(async () => expect(await statusOf(job.id)).toBe('dead'));
+		expect(logger.error).toHaveBeenCalledWith(
+			'job failed and is dead',
+			expect.objectContaining({ jobId: job.id })
+		);
 	});
 
 	test('fails an invalid payload without running it or storing its content', async () => {
@@ -114,7 +138,7 @@ describe('running jobs', () => {
 		await vi.waitFor(async () => expect(await statusOf(job.id)).toBe('dead'));
 		expect(handler).not.toHaveBeenCalled();
 		expect(await attemptsOf(job.id)).toMatchObject([
-			{ outcome: 'failed', error: 'The job type or payload is invalid.' }
+			{ attemptNumber: 1, outcome: 'failed', error: 'The job type or payload is invalid.' }
 		]);
 		expect(JSON.stringify(vi.mocked(logger.error).mock.calls)).not.toContain('Jane Doe');
 	});
@@ -204,7 +228,7 @@ describe('running jobs', () => {
 				expect.objectContaining({ jobId: job.id })
 			)
 		);
-		expect(logger.error).not.toHaveBeenCalledWith('job failed', expect.anything());
+		expect(logger.warn).not.toHaveBeenCalledWith('job failed, will retry', expect.anything());
 		expect(await statusOf(job.id)).toBe('running');
 		expect(await worker.stop(1000)).toBe('stopped');
 	});

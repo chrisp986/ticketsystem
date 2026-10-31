@@ -45,7 +45,7 @@ Done when: every change has a human or system actor, every assigned ticket shows
 
 - [x] 3.1 `jobs` and `job_attempts` tables
 - [x] 3.2 Worker process claiming jobs with `FOR UPDATE SKIP LOCKED`
-- [ ] 3.3 Retries, backoff, dead-letter state
+- [x] 3.3 Retries, backoff, dead-letter state
 - [ ] 3.4 Stale-lock recovery
 - [ ] 3.5 First job: overdue next steps raise attention
 
@@ -122,4 +122,5 @@ Done when: actions per ticket are below the Phase 2 baseline.
 - Rate-limit failed sign-ins; required before the app is reachable from outside the local network (ADR 0007)
 - Password reset and user deactivation without SQL (ADR 0007)
 - Metrics page for admins; needs an admin role (ADR 0010)
+- Run a dead job again without SQL, once email or AI jobs exist (ADR 0011)
 - Bundle the worker for production; `pnpm worker` needs the full install, including `svelte-kit sync` for `$lib` (ADR 0011)
