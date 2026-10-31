@@ -158,19 +158,91 @@ describe('finishing', () => {
 		]);
 	});
 
-	test('records a failure with its error and makes the job dead', async () => {
+	test('returns a failed job to the queue with a later run time', async () => {
 		const job = await insertJob();
 		const claim = await claimed();
+		const runAt = new Date(later.getTime() + 60_000);
 
-		expect(await recordJobFailure(testDb, claim, 'x'.repeat(3000), later)).toBe('recorded');
+		expect(await recordJobFailure(testDb, claim, { error: 'Timeout', retry: true }, later)).toEqual(
+			{
+				outcome: 'retrying',
+				runAt
+			}
+		);
+		expect(await storedJob(job.id)).toMatchObject({
+			status: 'queued',
+			attempts: 1,
+			runAt,
+			lockedBy: null,
+			lockedUntil: null,
+			finishedAt: null,
+			updatedAt: later
+		});
+		expect(await attemptsOf(job.id)).toMatchObject([
+			{ finishedAt: later, outcome: 'failed', error: 'Timeout' }
+		]);
+	});
+
+	test('does not claim a failed job before its wait ends, then starts the next attempt', async () => {
+		const job = await insertJob();
+		const claim = await claimed();
+		const runAt = new Date(later.getTime() + 60_000);
+
+		await recordJobFailure(testDb, claim, { error: 'Timeout', retry: true }, later);
+
+		expect(await claimJob(testDb, claimInput, new Date(runAt.getTime() - 1))).toBeNull();
+		expect(await claimJob(testDb, { ...claimInput, workerId: 'worker-b' }, runAt)).toMatchObject({
+			id: job.id,
+			status: 'running',
+			attempts: 2,
+			lockedBy: 'worker-b'
+		});
+
+		const attempts = await attemptsOf(job.id);
+
+		expect(attempts.toSorted((a, b) => a.attemptNumber - b.attemptNumber)).toMatchObject([
+			{ attemptNumber: 1, workerId: 'worker-a', outcome: 'failed', error: 'Timeout' },
+			{ attemptNumber: 2, workerId: 'worker-b', outcome: null, error: null }
+		]);
+	});
+
+	test('makes the job dead after its last attempt', async () => {
+		const job = await insertJob({ attempts: 1, maxAttempts: 2 });
+		const claim = await claimed();
+
+		expect(claim.attemptNumber).toBe(2);
+		expect(await recordJobFailure(testDb, claim, { error: 'Timeout', retry: true }, later)).toEqual(
+			{
+				outcome: 'dead'
+			}
+		);
 		expect(await storedJob(job.id)).toMatchObject({
 			status: 'dead',
+			attempts: 2,
 			lockedBy: null,
 			finishedAt: later
 		});
-		expect(await attemptsOf(job.id)).toMatchObject([
-			{ finishedAt: later, outcome: 'failed', error: 'x'.repeat(2000) }
-		]);
+	});
+
+	test('makes the job dead at once when retrying cannot help', async () => {
+		const job = await insertJob();
+		const claim = await claimed();
+
+		expect(
+			await recordJobFailure(testDb, claim, { error: 'Invalid', retry: false }, later)
+		).toEqual({
+			outcome: 'dead'
+		});
+		expect(await storedJob(job.id)).toMatchObject({ status: 'dead', attempts: 1 });
+	});
+
+	test('shortens a long error', async () => {
+		const job = await insertJob();
+		const claim = await claimed();
+
+		await recordJobFailure(testDb, claim, { error: 'x'.repeat(3000), retry: true }, later);
+
+		expect(await attemptsOf(job.id)).toMatchObject([{ error: 'x'.repeat(2000) }]);
 	});
 
 	test('refuses a worker that does not hold the job', async () => {
@@ -180,9 +252,14 @@ describe('finishing', () => {
 		expect(await recordJobSuccess(testDb, { ...claim, workerId: 'worker-b' }, later)).toBe(
 			'lock_lost'
 		);
-		expect(await recordJobFailure(testDb, { ...claim, attemptNumber: 2 }, 'late', later)).toBe(
-			'lock_lost'
-		);
+		expect(
+			await recordJobFailure(
+				testDb,
+				{ ...claim, attemptNumber: 2 },
+				{ error: 'late', retry: true },
+				later
+			)
+		).toEqual({ outcome: 'lock_lost' });
 		expect(await storedJob(job.id)).toMatchObject({ status: 'running', lockedBy: 'worker-a' });
 		expect(await attemptsOf(job.id)).toMatchObject([{ outcome: null }]);
 	});
@@ -193,7 +270,9 @@ describe('finishing', () => {
 
 		await recordJobSuccess(testDb, claim, later);
 
-		expect(await recordJobFailure(testDb, claim, 'late', later)).toBe('lock_lost');
+		expect(await recordJobFailure(testDb, claim, { error: 'late', retry: true }, later)).toEqual({
+			outcome: 'lock_lost'
+		});
 		expect(await storedJob(job.id)).toMatchObject({ status: 'succeeded' });
 	});
 });

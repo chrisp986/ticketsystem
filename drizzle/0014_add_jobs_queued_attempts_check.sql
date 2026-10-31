@@ -1,0 +1,1 @@
+ALTER TABLE "jobs" ADD CONSTRAINT "jobs_queued_has_attempts_left" CHECK ("jobs"."status" <> 'queued' OR "jobs"."attempts" < "jobs"."max_attempts");

@@ -25,6 +25,11 @@ export type JobHandlers = {
 	) => Promise<void>;
 };
 
+/**
+ * A job that can never run, so retrying it is pointless (ADR 0011).
+ */
+class InvalidJobError extends Error {}
+
 export type WorkerOptions = {
 	db: NodePgDatabase;
 	workerId: string;
@@ -69,7 +74,7 @@ export function startWorker(options: WorkerOptions): Worker {
 
 		if (!job.success) {
 			// A fixed message: the validation error could quote the payload.
-			throw new Error('The job type or payload is invalid.');
+			throw new InvalidJobError('The job type or payload is invalid.');
 		}
 
 		const handler = handlers[job.data.type] as (
@@ -101,22 +106,44 @@ export function startWorker(options: WorkerOptions): Worker {
 		const durationMs = Date.now() - startedAt;
 
 		try {
-			if (handlerError) {
-				logger.error('job failed', { ...context, durationMs, err: handlerError.err });
+			if (!handlerError) {
+				const finished = await recordJobSuccess(db, claim);
+
+				if (finished === 'lock_lost') {
+					logger.warn('job result discarded, the lock was lost', context);
+				} else {
+					logger.info('job succeeded', { ...context, durationMs });
+				}
+
+				return;
+			}
+
+			const { err } = handlerError;
+			const failure = await recordJobFailure(db, claim, {
+				error: safeErrorMessage(err),
+				retry: !(err instanceof InvalidJobError)
+			});
+
+			if (failure.outcome === 'retrying') {
+				logger.warn('job failed, will retry', {
+					...context,
+					durationMs,
+					nextRunAt: failure.runAt.toISOString(),
+					err
+				});
+			} else if (failure.outcome === 'dead') {
+				logger.error('job failed and is dead', { ...context, durationMs, err });
 			} else {
-				logger.info('job succeeded', { ...context, durationMs });
+				logger.warn('job result discarded, the lock was lost', { ...context, durationMs, err });
 			}
-
-			const finished = handlerError
-				? await recordJobFailure(db, claim, safeErrorMessage(handlerError.err))
-				: await recordJobSuccess(db, claim);
-
-			if (finished === 'lock_lost') {
-				logger.warn('job result discarded, the lock was lost', context);
-			}
-		} catch (err) {
+		} catch (recordError) {
 			// The job stays running until its lock expires (step 3.4).
-			logger.error('job result could not be recorded', { ...context, err });
+			logger.error('job result could not be recorded', {
+				...context,
+				durationMs,
+				err: recordError,
+				jobError: handlerError?.err
+			});
 		}
 	}
 

@@ -87,6 +87,10 @@ export const jobs = pgTable(
 		check(
 			'jobs_attempts_within_limit',
 			sql`${table.maxAttempts} > 0 AND ${table.attempts} >= 0 AND ${table.attempts} <= ${table.maxAttempts}`
+		),
+		check(
+			'jobs_queued_has_attempts_left',
+			sql`${table.status} <> 'queued' OR ${table.attempts} < ${table.maxAttempts}`
 		)
 	]
 );

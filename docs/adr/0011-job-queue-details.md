@@ -23,6 +23,8 @@ ADR 0003 decides on one generic queue in the database, a separate worker process
 
 **Claiming and finishing.** A short transaction claims a job and writes its attempt, and the job runs outside it, because a job can take minutes. A result is only recorded while the worker still holds the job, so a worker that lost its lock cannot overwrite a newer try.
 
+**Retries.** A failed job waits 1 minute, 5 minutes, 25 minutes, then at most 2 hours before its next attempt, so the default 5 attempts span about 2.5 hours. An invalid payload or unknown job type goes straight to `dead`, because retrying cannot fix it. The database enforces that a queued job has attempts left, so a claim can never exceed the limit and block its queue. A dead job is run again with SQL for now.
+
 **Shutdown.** On `SIGTERM` or `SIGINT` the worker stops claiming and waits up to 30 seconds for running jobs. A job still running then keeps its lock and is recovered like that of a killed worker.
 
 **Running the worker.** `pnpm worker` runs the TypeScript source with `tsx`. Bundling it is deferred until there is a deployment to bundle for.
