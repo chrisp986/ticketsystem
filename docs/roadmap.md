@@ -46,7 +46,7 @@ Done when: every change has a human or system actor, every assigned ticket shows
 - [x] 3.1 `jobs` and `job_attempts` tables
 - [x] 3.2 Worker process claiming jobs with `FOR UPDATE SKIP LOCKED`
 - [x] 3.3 Retries, backoff, dead-letter state
-- [ ] 3.4 Stale-lock recovery
+- [x] 3.4 Stale-lock recovery
 - [ ] 3.5 First job: overdue next steps raise attention
 
 Done when: killing the worker mid-job loses nothing.
