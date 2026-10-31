@@ -30,6 +30,13 @@ function safeMessageAndStack(error: Error): { message: string; stack?: string } 
 	return { message, stack: error.stack?.replace(error.message, message) };
 }
 
+/**
+ * An error's message without query parameters, safe to log or store.
+ */
+export function safeErrorMessage(error: unknown): string {
+	return error instanceof Error ? safeMessageAndStack(error).message : 'A non-error was thrown.';
+}
+
 export function serializeError(error: unknown, depth = 0): unknown {
 	if (!(error instanceof Error)) {
 		return error;
