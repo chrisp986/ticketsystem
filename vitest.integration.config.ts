@@ -9,6 +9,8 @@ export default defineConfig({
 	},
 	test: {
 		environment: 'node',
-		include: ['tests/integration/**/*.test.ts']
+		include: ['tests/integration/**/*.test.ts'],
+		// One shared database: a worker test must not claim another file's jobs.
+		fileParallelism: false
 	}
 });

@@ -16,3 +16,5 @@ export const jobAttemptOutcomes = ['succeeded', 'failed', 'lost'] as const;
 export const DEFAULT_MAX_JOB_ATTEMPTS = 5;
 
 export const JOB_DEDUPE_KEY_MAX_LENGTH = 200;
+
+export const JOB_ERROR_MAX_LENGTH = 2000;

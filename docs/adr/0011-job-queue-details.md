@@ -21,6 +21,12 @@ ADR 0003 decides on one generic queue in the database, a separate worker process
 
 **Attempts.** `job_attempts` has one row per try, with the number, worker, times, outcome (`succeeded`, `failed` or `lost`, the last for an expired lock) and an error. The error is a message for operators and must not contain customer data (ADR 0004). `max_attempts` defaults to 5.
 
+**Claiming and finishing.** A short transaction claims a job and writes its attempt, and the job runs outside it, because a job can take minutes. A result is only recorded while the worker still holds the job, so a worker that lost its lock cannot overwrite a newer try.
+
+**Shutdown.** On `SIGTERM` or `SIGINT` the worker stops claiming and waits up to 30 seconds for running jobs. A job still running then keeps its lock and is recovered like that of a killed worker.
+
+**Running the worker.** `pnpm worker` runs the TypeScript source with `tsx`. Bundling it is deferred until there is a deployment to bundle for.
+
 **Clean-up.** Job rows are operational data (ADR 0003), so attempts are deleted with their job.
 
 ## Consequences
