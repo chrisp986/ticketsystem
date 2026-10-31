@@ -30,8 +30,8 @@ function heldBy(claim: JobClaim) {
 
 async function closeAttempt(
 	tx: Transaction,
-	claim: JobClaim,
-	result: { outcome: 'succeeded' | 'failed'; error: string | null },
+	claim: Pick<JobClaim, 'jobId' | 'attemptNumber'>,
+	result: { outcome: 'succeeded' | 'failed' | 'lost'; error: string | null },
 	now: Date
 ): Promise<void> {
 	await tx
@@ -79,8 +79,40 @@ export async function recordJobSuccess(
 }
 
 /**
- * Records a failed try. The job waits and returns to the queue while it has attempts left;
- * otherwise, or with `retry: false` for a failure that retrying cannot fix, it is dead.
+ * Ends an attempt that did not succeed. The job waits and returns to the queue while it has
+ * attempts left; otherwise, or with `retry: false`, it is dead. The caller holds the row lock.
+ */
+export async function endFailedAttempt(
+	tx: Transaction,
+	attempt: { jobId: string; attemptNumber: number; maxAttempts: number },
+	failure: { outcome: 'failed' | 'lost'; error: string; retry: boolean },
+	now: Date
+): Promise<{ outcome: 'retrying'; runAt: Date } | { outcome: 'dead' }> {
+	const released = { lockedBy: null, lockedUntil: null, updatedAt: now };
+	const retry = failure.retry && attempt.attemptNumber < attempt.maxAttempts;
+	const runAt = new Date(now.getTime() + jobRetryDelayMs(attempt.attemptNumber));
+
+	await tx
+		.update(jobs)
+		.set(
+			retry
+				? { ...released, status: 'queued', runAt }
+				: { ...released, status: 'dead', finishedAt: now }
+		)
+		.where(eq(jobs.id, attempt.jobId));
+
+	await closeAttempt(
+		tx,
+		attempt,
+		{ outcome: failure.outcome, error: failure.error.slice(0, JOB_ERROR_MAX_LENGTH) },
+		now
+	);
+
+	return retry ? { outcome: 'retrying', runAt } : { outcome: 'dead' };
+}
+
+/**
+ * Records a failed try; `retry: false` is for a failure that retrying cannot fix.
  *
  * The error is stored for operators and must not contain customer data (ADR 0011).
  */
@@ -101,26 +133,29 @@ export async function recordJobFailure(
 			return { outcome: 'lock_lost' };
 		}
 
-		const released = { lockedBy: null, lockedUntil: null, updatedAt: now };
-		const retry = failure.retry && claim.attemptNumber < held.maxAttempts;
-		const runAt = new Date(now.getTime() + jobRetryDelayMs(claim.attemptNumber));
-
-		await tx
-			.update(jobs)
-			.set(
-				retry
-					? { ...released, status: 'queued', runAt }
-					: { ...released, status: 'dead', finishedAt: now }
-			)
-			.where(eq(jobs.id, claim.jobId));
-
-		await closeAttempt(
+		return endFailedAttempt(
 			tx,
-			claim,
-			{ outcome: 'failed', error: failure.error.slice(0, JOB_ERROR_MAX_LENGTH) },
+			{ ...claim, maxAttempts: held.maxAttempts },
+			{ outcome: 'failed', ...failure },
 			now
 		);
-
-		return retry ? { outcome: 'retrying', runAt } : { outcome: 'dead' };
 	});
+}
+
+/**
+ * Extends the lock of a running job. Returns `lock_lost` when this worker no longer holds it.
+ */
+export async function renewJobLock(
+	database: NodePgDatabase,
+	claim: JobClaim,
+	lockDurationMs: number,
+	now: Date = new Date()
+): Promise<'renewed' | 'lock_lost'> {
+	const [renewed] = await database
+		.update(jobs)
+		.set({ lockedUntil: new Date(now.getTime() + lockDurationMs), updatedAt: now })
+		.where(heldBy(claim))
+		.returning({ id: jobs.id });
+
+	return renewed ? 'renewed' : 'lock_lost';
 }

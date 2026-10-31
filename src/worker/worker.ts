@@ -5,8 +5,9 @@ import { jobSchema } from '../lib/modules/jobs/job.validation';
 import type { Job, JobType } from '../lib/modules/jobs/job.validation';
 import type { JobRecord } from '../lib/server/db/schema/jobs';
 import { claimJob } from '../lib/server/jobs/claim-job';
-import { recordJobFailure, recordJobSuccess } from '../lib/server/jobs/finish-job';
+import { recordJobFailure, recordJobSuccess, renewJobLock } from '../lib/server/jobs/finish-job';
 import type { JobClaim } from '../lib/server/jobs/finish-job';
+import { recoverExpiredJobs } from '../lib/server/jobs/recover-expired-jobs';
 import { logger, safeErrorMessage } from '../lib/server/logger';
 
 type JobQueue = (typeof jobQueues)[number];
@@ -37,12 +38,15 @@ export type WorkerOptions = {
 	concurrency: Record<JobQueue, number>;
 	pollIntervalMs: number;
 	lockDurationMs: number;
+	/** Well below `lockDurationMs`, so one failed renewal does not lose the lock (ADR 0011). */
+	renewIntervalMs: number;
+	recoveryIntervalMs: number;
 };
 
 export type Worker = {
 	/**
 	 * Stops claiming and waits for running jobs. A job still running after the timeout keeps
-	 * its lock, to be recovered once the lock expires (step 3.4).
+	 * its lock, to be recovered once the lock expires.
 	 */
 	stop(timeoutMs: number): Promise<'stopped' | 'timed_out'>;
 };
@@ -52,7 +56,16 @@ export type Worker = {
  * and a busy queue never holds up another (ADR 0003).
  */
 export function startWorker(options: WorkerOptions): Worker {
-	const { db, workerId, handlers, concurrency, pollIntervalMs, lockDurationMs } = options;
+	const {
+		db,
+		workerId,
+		handlers,
+		concurrency,
+		pollIntervalMs,
+		lockDurationMs,
+		renewIntervalMs,
+		recoveryIntervalMs
+	} = options;
 
 	let stopping = false;
 	const wakers = new Set<() => void>();
@@ -85,6 +98,36 @@ export function startWorker(options: WorkerOptions): Worker {
 		await handler(job.data.payload, { db });
 	}
 
+	/**
+	 * Renews the lock until the returned function is called. A worker that lost its lock is not
+	 * interrupted: the job may run twice anyway, and its result will be discarded (ADR 0011).
+	 */
+	function keepLockRenewed(claim: JobClaim, context: Record<string, unknown>) {
+		let inFlight = Promise.resolve();
+
+		async function renew() {
+			try {
+				if ((await renewJobLock(db, claim, lockDurationMs)) === 'lock_lost') {
+					clearInterval(timer);
+					logger.warn('job lock lost while running', context);
+				}
+			} catch (err) {
+				// Tried again at the next interval, before the lock expires.
+				logger.warn('job lock could not be renewed', { ...context, err });
+			}
+		}
+
+		const timer = setInterval(() => {
+			inFlight = inFlight.then(renew);
+		}, renewIntervalMs);
+
+		return async () => {
+			clearInterval(timer);
+			// A renewal still under way must not see the finished job as a lost lock.
+			await inFlight;
+		};
+	}
+
 	async function runJob(record: JobRecord): Promise<void> {
 		const context = {
 			jobId: record.id,
@@ -97,11 +140,15 @@ export function startWorker(options: WorkerOptions): Worker {
 
 		let handlerError: { err: unknown } | undefined;
 
+		const stopRenewing = keepLockRenewed(claim, context);
+
 		try {
 			await runHandler(record);
 		} catch (err) {
 			handlerError = { err };
 		}
+
+		await stopRenewing();
 
 		const durationMs = Date.now() - startedAt;
 
@@ -137,7 +184,7 @@ export function startWorker(options: WorkerOptions): Worker {
 				logger.warn('job result discarded, the lock was lost', { ...context, durationMs, err });
 			}
 		} catch (recordError) {
-			// The job stays running until its lock expires (step 3.4).
+			// The job stays running until its lock expires and it is recovered.
 			logger.error('job result could not be recorded', {
 				...context,
 				durationMs,
@@ -166,10 +213,36 @@ export function startWorker(options: WorkerOptions): Worker {
 		}
 	}
 
-	const loops = (Object.entries(concurrency) as [JobQueue, number][]).flatMap(([queue, count]) =>
-		Array.from({ length: count }, () => claimLoop(queue))
+	async function recoveryLoop(): Promise<void> {
+		while (!stopping) {
+			try {
+				for (const job of await recoverExpiredJobs(db)) {
+					const { jobId, type, attempt } = job;
+					const context = { jobId, type, attempt, workerId };
+
+					if (job.outcome === 'retrying') {
+						logger.warn('lost job will retry', {
+							...context,
+							nextRunAt: job.runAt.toISOString()
+						});
+					} else {
+						logger.error('lost job is dead', context);
+					}
+				}
+			} catch (err) {
+				logger.error('job recovery failed', { workerId, err });
+			}
+
+			if (!stopping) {
+				await sleep(recoveryIntervalMs);
+			}
+		}
+	}
+
+	const claimLoops = (Object.entries(concurrency) as [JobQueue, number][]).flatMap(
+		([queue, count]) => Array.from({ length: count }, () => claimLoop(queue))
 	);
-	const finished = Promise.all(loops);
+	const finished = Promise.all([...claimLoops, recoveryLoop()]);
 
 	return {
 		async stop(timeoutMs) {

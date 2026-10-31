@@ -39,6 +39,8 @@ function start(handler: JobHandlers['overdue_next_steps'], options: Partial<Work
 		concurrency: { default: 1, ai: 0 },
 		pollIntervalMs: 10,
 		lockDurationMs: 60_000,
+		renewIntervalMs: 20_000,
+		recoveryIntervalMs: 60_000,
 		...options
 	});
 
@@ -246,6 +248,102 @@ describe('running jobs', () => {
 			)
 		);
 		expect(await worker.stop(1000)).toBe('stopped');
+	});
+});
+
+describe('keeping the lock', () => {
+	test('renews it while a slow job runs, so the job is not recovered', async () => {
+		const job = await insertJob();
+		const started = deferred();
+		const release = deferred();
+
+		start(
+			async () => {
+				started.resolve();
+				await release.promise;
+			},
+			{ lockDurationMs: 300, renewIntervalMs: 30, recoveryIntervalMs: 20 }
+		);
+
+		await started.promise;
+
+		const [first] = await testDb.select().from(jobs).where(eq(jobs.id, job.id));
+
+		await new Promise((resolve) => setTimeout(resolve, 700));
+
+		const [later] = await testDb.select().from(jobs).where(eq(jobs.id, job.id));
+
+		expect(later).toMatchObject({ status: 'running', attempts: 1 });
+		expect(later?.lockedUntil?.getTime()).toBeGreaterThan(first?.lockedUntil?.getTime() ?? 0);
+
+		release.resolve();
+
+		await vi.waitFor(async () => expect(await statusOf(job.id)).toBe('succeeded'));
+		expect(await attemptsOf(job.id)).toMatchObject([{ outcome: 'succeeded' }]);
+	});
+
+	test('stops renewing a lost lock and discards the result', async () => {
+		const job = await insertJob();
+		const started = deferred();
+		const release = deferred();
+
+		const worker = start(
+			async () => {
+				started.resolve();
+				await release.promise;
+			},
+			{ renewIntervalMs: 10 }
+		);
+
+		await started.promise;
+
+		await testDb.update(jobs).set({ lockedBy: 'another-worker' }).where(eq(jobs.id, job.id));
+
+		await vi.waitFor(() =>
+			expect(logger.warn).toHaveBeenCalledWith(
+				'job lock lost while running',
+				expect.objectContaining({ jobId: job.id })
+			)
+		);
+
+		release.resolve();
+
+		expect(await worker.stop(1000)).toBe('stopped');
+
+		const lostWarnings = vi
+			.mocked(logger.warn)
+			.mock.calls.filter(([message]) => message === 'job lock lost while running');
+
+		expect(lostWarnings).toHaveLength(1);
+		expect(logger.warn).toHaveBeenCalledWith(
+			'job result discarded, the lock was lost',
+			expect.objectContaining({ jobId: job.id })
+		);
+		expect(await statusOf(job.id)).toBe('running');
+		expect(await attemptsOf(job.id)).toMatchObject([{ outcome: null }]);
+	});
+
+	test('does not report a lost lock when a job finishes during a renewal', async () => {
+		const inserted = await Promise.all(Array.from({ length: 10 }, () => insertJob()));
+
+		const worker = start(
+			async () => {
+				await new Promise((resolve) => setTimeout(resolve, 5));
+			},
+			{ renewIntervalMs: 1 }
+		);
+
+		await vi.waitFor(
+			async () => {
+				for (const job of inserted) {
+					expect(await statusOf(job.id)).toBe('succeeded');
+				}
+			},
+			{ timeout: 5000 }
+		);
+		await worker.stop(1000);
+
+		expect(logger.warn).not.toHaveBeenCalledWith('job lock lost while running', expect.anything());
 	});
 });
 
