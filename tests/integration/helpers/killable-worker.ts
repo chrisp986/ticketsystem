@@ -27,5 +27,6 @@ startWorker({
 	pollIntervalMs: 20,
 	lockDurationMs: 1000,
 	renewIntervalMs: 200,
-	recoveryIntervalMs: 60_000
+	recoveryIntervalMs: 60_000,
+	recurringJobs: []
 });

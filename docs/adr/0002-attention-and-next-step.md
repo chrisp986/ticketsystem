@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-04
-- Amended: 2026-10-25 (the database invariant, see below)
+- Amended: 2026-10-25 (the database invariant, see below), 2026-10-31 (overdue attention, see below)
 
 ## Context
 
@@ -31,6 +31,8 @@ A ticket's status says where it is in the workflow, but not whether a human must
 An overdue next step raises attention with reason `next_step_overdue`; this needs the background worker and is roadmap step 3.5. Until then, overdue tickets are listed with a query, without a job queue.
 
 **Amendment (2026-10-25).** This ADR first allowed "a next step due date or attention". Step 1.5 implemented the stricter rule above (`tickets_open_has_next_step_due`), and ADR 0006 builds on it; the text now matches.
+
+**Amendment (2026-10-31).** Step 3.5 raises overdue attention, recorded with the system actor `overdue-job`. Each due date raises it only once: without this, "mark as handled" would not stick, because the job would raise attention again while the next step stays overdue. A handled ticket stays in the overdue views, and a new due date can raise attention again. Existing attention keeps its reason and time, and no event is written for it.
 
 **Later.** Manual attention is modeled as a timed follow-up with a required note, not a bare flag. Once a ticket can have several reasons at once, the columns move into an `attention_items` table.
 

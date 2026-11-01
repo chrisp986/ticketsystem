@@ -8,7 +8,7 @@ The project is also a practical environment for learning TypeScript and full-sta
 
 ## Status
 
-Phases 0 (Foundation) and 1 (Ticket lifecycle) are complete; Phase 2 (Users and ownership) is in progress. Working today:
+Phases 0 (Foundation), 1 (Ticket lifecycle) and 3 (Background jobs) are complete; Phase 2 (Users and ownership) waits only for its baseline metrics. Working today:
 
 - Ticket creation, listing, filtering, search and status changes
 - Optimistic concurrency control and a status history
@@ -23,6 +23,7 @@ Phases 0 (Foundation) and 1 (Ticket lifecycle) are complete; Phase 2 (Users and 
 - Every change and every ticket records its actor (a user, the system or AI); the ticket page shows one timeline
 - Internal notes (internal note, phone call, on site) on any ticket, also together with a status change; they appear in the timeline
 - Ticket list views with counts: my tickets (the default), my overdue, unassigned, needs action, needs attention, overdue, all
+- A background worker (`pnpm worker`) with retries and crash recovery; overdue next steps raise attention
 
 Email, AI processing and human review are not implemented yet. See the [roadmap](docs/roadmap.md).
 
@@ -53,7 +54,7 @@ cp .env.example .env          # then fill in real values
 docker compose up -d          # development database on 127.0.0.1:5432
 pnpm db:migrate
 pnpm user:create --email you@example.com --name "Your Name"   # asks for a password
-pnpm dev                      # http://localhost:5173
+pnpm dev                      # http://localhost:5173, also runs the worker
 ```
 
 There is no sign-up page. Every account is created with `pnpm user:create`; the password needs at least 12 characters. See [ADR 0007](docs/adr/0007-authentication-and-sessions.md).
@@ -96,7 +97,8 @@ pnpm validate
 
 | Script                  | Purpose                                      |
 | ----------------------- | -------------------------------------------- |
-| `pnpm dev`              | Development server                           |
+| `pnpm dev`              | Development server and worker                |
+| `pnpm dev:web`          | Development server only                      |
 | `pnpm build`            | Production build into `build/`               |
 | `pnpm start`            | Run the production build, loading `.env`     |
 | `pnpm check`            | Svelte and TypeScript checks                 |

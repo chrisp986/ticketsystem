@@ -41,6 +41,7 @@ function start(handler: JobHandlers['overdue_next_steps'], options: Partial<Work
 		lockDurationMs: 60_000,
 		renewIntervalMs: 20_000,
 		recoveryIntervalMs: 60_000,
+		recurringJobs: [],
 		...options
 	});
 
@@ -344,6 +345,76 @@ describe('keeping the lock', () => {
 		await worker.stop(1000);
 
 		expect(logger.warn).not.toHaveBeenCalledWith('job lock lost while running', expect.anything());
+	});
+});
+
+describe('recurring jobs', () => {
+	const recurring = {
+		intervalMs: 20,
+		job: {
+			type: 'overdue_next_steps',
+			payload: {},
+			dedupeKey: 'recurring-test',
+			maxAttempts: 1
+		}
+	} as const;
+
+	async function finishedRuns() {
+		return testDb.select().from(jobs).where(eq(jobs.dedupeKey, 'recurring-test'));
+	}
+
+	test('keeps only one queued or running while one is pending', async () => {
+		const started = deferred();
+		const release = deferred();
+
+		start(
+			async () => {
+				started.resolve();
+				await release.promise;
+			},
+			{ recurringJobs: [recurring] }
+		);
+
+		await started.promise;
+		await new Promise((resolve) => setTimeout(resolve, 100));
+
+		const runs = await finishedRuns();
+
+		expect(runs).toHaveLength(1);
+		expect(runs[0]).toMatchObject({ status: 'running', maxAttempts: 1 });
+
+		release.resolve();
+	});
+
+	test('runs again after a failed run, which is dead without a retry', async () => {
+		const handler = vi
+			.fn<JobHandlers['overdue_next_steps']>()
+			.mockRejectedValueOnce(new Error('The database is busy.'))
+			.mockResolvedValue();
+
+		start(handler, { recurringJobs: [recurring] });
+
+		await vi.waitFor(async () => {
+			const statuses = (await finishedRuns()).map((run) => run.status);
+
+			expect(statuses).toContain('dead');
+			expect(statuses).toContain('succeeded');
+		});
+	});
+
+	test('survives a failure while enqueuing', async () => {
+		const broken = createDb(getTestDatabaseUrl(), 1);
+		await broken.pool.end();
+
+		const worker = start(async () => {}, { db: broken.db, recurringJobs: [recurring] });
+
+		await vi.waitFor(() =>
+			expect(logger.error).toHaveBeenCalledWith(
+				'recurring job could not be enqueued',
+				expect.objectContaining({ type: 'overdue_next_steps' })
+			)
+		);
+		expect(await worker.stop(1000)).toBe('stopped');
 	});
 });
 
