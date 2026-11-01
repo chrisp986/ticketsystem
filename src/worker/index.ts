@@ -12,6 +12,7 @@ import { parseServerConfig } from '../lib/server/config';
 import { createDb } from '../lib/server/db/create-db';
 import { logger, setLogLevel } from '../lib/server/logger';
 import { jobHandlers } from './handlers';
+import { recurringJobs } from './recurring-jobs';
 import { startWorker } from './worker';
 
 const POLL_INTERVAL_MS = 1000;
@@ -38,7 +39,8 @@ async function main() {
 		pollIntervalMs: POLL_INTERVAL_MS,
 		lockDurationMs: LOCK_DURATION_MS,
 		renewIntervalMs: RENEW_INTERVAL_MS,
-		recoveryIntervalMs: RECOVERY_INTERVAL_MS
+		recoveryIntervalMs: RECOVERY_INTERVAL_MS,
+		recurringJobs
 	});
 
 	logger.info('worker started', { workerId, concurrency: CONCURRENCY });

@@ -207,7 +207,8 @@ describe('killing the worker mid-job', () => {
 				pollIntervalMs: 20,
 				lockDurationMs: 60_000,
 				renewIntervalMs: 20_000,
-				recoveryIntervalMs: 50
+				recoveryIntervalMs: 50,
+				recurringJobs: []
 			});
 
 			try {

@@ -4,7 +4,8 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "concurrently --names web,worker --kill-others \"vite dev\" \"tsx watch src/worker/index.ts\"",
+		"dev:web": "vite dev",
 		"start": "node --env-file=.env build",
 		"build": "vite build",
 		"preview": "vite preview",
@@ -31,6 +32,7 @@
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@types/node": "^24",
 		"@types/pg": "^8.23.1",
+		"concurrently": "^10.0.6",
 		"drizzle-kit": "^0.31.10",
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",

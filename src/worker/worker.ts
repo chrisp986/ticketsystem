@@ -2,9 +2,10 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { jobQueues } from '../lib/modules/jobs/job.constants';
 import { jobSchema } from '../lib/modules/jobs/job.validation';
-import type { Job, JobType } from '../lib/modules/jobs/job.validation';
+import type { EnqueueJobInput, Job, JobType } from '../lib/modules/jobs/job.validation';
 import type { JobRecord } from '../lib/server/db/schema/jobs';
 import { claimJob } from '../lib/server/jobs/claim-job';
+import { enqueueJob } from '../lib/server/jobs/enqueue-job';
 import { recordJobFailure, recordJobSuccess, renewJobLock } from '../lib/server/jobs/finish-job';
 import type { JobClaim } from '../lib/server/jobs/finish-job';
 import { recoverExpiredJobs } from '../lib/server/jobs/recover-expired-jobs';
@@ -27,6 +28,15 @@ export type JobHandlers = {
 };
 
 /**
+ * A job the worker enqueues at startup and then at every interval. It needs a dedupe key, so
+ * several workers keep only one queued or running (ADR 0011).
+ */
+export type RecurringJob = {
+	intervalMs: number;
+	job: EnqueueJobInput & { dedupeKey: string };
+};
+
+/**
  * A job that can never run, so retrying it is pointless (ADR 0011).
  */
 class InvalidJobError extends Error {}
@@ -41,6 +51,7 @@ export type WorkerOptions = {
 	/** Well below `lockDurationMs`, so one failed renewal does not lose the lock (ADR 0011). */
 	renewIntervalMs: number;
 	recoveryIntervalMs: number;
+	recurringJobs: RecurringJob[];
 };
 
 export type Worker = {
@@ -64,7 +75,8 @@ export function startWorker(options: WorkerOptions): Worker {
 		pollIntervalMs,
 		lockDurationMs,
 		renewIntervalMs,
-		recoveryIntervalMs
+		recoveryIntervalMs,
+		recurringJobs
 	} = options;
 
 	let stopping = false;
@@ -239,10 +251,28 @@ export function startWorker(options: WorkerOptions): Worker {
 		}
 	}
 
+	async function recurringLoop({ intervalMs, job }: RecurringJob): Promise<void> {
+		while (!stopping) {
+			try {
+				await enqueueJob(db, job);
+			} catch (err) {
+				logger.error('recurring job could not be enqueued', { type: job.type, workerId, err });
+			}
+
+			if (!stopping) {
+				await sleep(intervalMs);
+			}
+		}
+	}
+
 	const claimLoops = (Object.entries(concurrency) as [JobQueue, number][]).flatMap(
 		([queue, count]) => Array.from({ length: count }, () => claimLoop(queue))
 	);
-	const finished = Promise.all([...claimLoops, recoveryLoop()]);
+	const finished = Promise.all([
+		...claimLoops,
+		recoveryLoop(),
+		...recurringJobs.map((recurring) => recurringLoop(recurring))
+	]);
 
 	return {
 		async stop(timeoutMs) {

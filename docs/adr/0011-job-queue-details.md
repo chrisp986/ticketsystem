@@ -27,6 +27,8 @@ ADR 0003 decides on one generic queue in the database, a separate worker process
 
 **Renewal and recovery.** A lock lasts 5 minutes and is renewed every 100 seconds while the job runs, so one failed renewal does not lose it. Each worker looks for expired locks at startup and every 30 seconds. The attempt becomes `lost`, and the job then follows the rules for a failure, so a job that kills its worker every time ends up `dead`. A worker that lost its lock is not interrupted, since that would need cancellation in every handler; its result is discarded. A result that arrives after the lock expired but before recovery is kept, because nobody else has started the job.
 
+**Recurring jobs.** The worker enqueues them at startup and at a fixed interval. A dedupe key keeps only one queued or running, however many workers run. The overdue check runs every 5 minutes with a single attempt: a retry would hold the key and block fresher runs, and the next run repeats the work anyway.
+
 **Shutdown.** On `SIGTERM` or `SIGINT` the worker stops claiming and waits up to 30 seconds for running jobs. A job still running then keeps its lock and is recovered like that of a killed worker.
 
 **Running the worker.** `pnpm worker` runs the TypeScript source with `tsx`. Bundling it is deferred until there is a deployment to bundle for.

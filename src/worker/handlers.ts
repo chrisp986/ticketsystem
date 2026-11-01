@@ -1,9 +1,11 @@
 import { logger } from '../lib/server/logger';
+import { raiseOverdueAttention } from '../lib/server/tickets/raise-overdue-attention';
 import type { JobHandlers } from './worker';
 
 export const jobHandlers: JobHandlers = {
-	// Placeholder until step 3.5 raises attention on overdue next steps.
-	overdue_next_steps: async () => {
-		logger.info('overdue next steps job has no work yet');
+	overdue_next_steps: async (_payload, { db }) => {
+		const raised = await raiseOverdueAttention(db);
+
+		logger.info('overdue next steps checked', { raised });
 	}
 };
