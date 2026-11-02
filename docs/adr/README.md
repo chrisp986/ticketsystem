@@ -36,3 +36,5 @@ What was decided, stated precisely enough to implement and test.
 
 What becomes easier or harder, and what follow-up work it creates.
 ```
+
+| [0012](0012-email-storage.md) | Email storage | Accepted |
