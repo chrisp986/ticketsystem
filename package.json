@@ -23,6 +23,8 @@
 		"db:migrate": "drizzle-kit migrate",
 		"user:create": "tsx scripts/create-user.ts",
 		"metrics:report": "tsx scripts/metrics-report.ts",
+		"gmail:authorize": "tsx scripts/gmail-authorize.ts",
+		"gmail:check": "tsx scripts/gmail-check.ts",
 		"worker": "tsx src/worker/index.ts"
 	},
 	"devDependencies": {
@@ -30,6 +32,7 @@
 		"@sveltejs/adapter-node": "^5.5.7",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/mailparser": "^3.9.0",
 		"@types/node": "^24",
 		"@types/pg": "^8.23.1",
 		"concurrently": "^10.0.6",
@@ -52,6 +55,7 @@
 		"@node-rs/argon2": "2.2.2",
 		"dotenv": "^17.4.2",
 		"drizzle-orm": "^0.45.2",
+		"mailparser": "^3.14.1",
 		"pg": "^8.23.0",
 		"tsx": "4.23.15",
 		"zod": "^4.6.5"

@@ -18,3 +18,25 @@ export function parseServerConfig(source: Record<string, string | undefined>): S
 
 	return result.data;
 }
+
+const gmailConfigSchema = z.object({
+	GMAIL_CLIENT_ID: z.string().trim().min(1),
+	GMAIL_CLIENT_SECRET: z.string().trim().min(1),
+	GMAIL_REFRESH_TOKEN: z.string().trim().min(1),
+	GMAIL_MAILBOX: z.email()
+});
+
+export type GmailConfig = z.infer<typeof gmailConfigSchema>;
+
+/**
+ * Gmail settings, needed only by the worker and the Gmail scripts (ADR 0013).
+ */
+export function parseGmailConfig(source: Record<string, string | undefined>): GmailConfig {
+	const result = gmailConfigSchema.safeParse(source);
+
+	if (!result.success) {
+		throw new Error(`Invalid Gmail configuration:\n${z.prettifyError(result.error)}`);
+	}
+
+	return result.data;
+}

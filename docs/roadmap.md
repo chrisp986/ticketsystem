@@ -51,10 +51,10 @@ Done when: every change has a human or system actor, every assigned ticket shows
 
 Done when: killing the worker mid-job loses nothing.
 
-## Phase 4: Inbound email ([ADR 0012](adr/0012-email-storage.md))
+## Phase 4: Inbound email ([ADR 0012](adr/0012-email-storage.md), [ADR 0013](adr/0013-email-provider-and-gmail.md))
 
 - [x] 4.1 Provider-neutral email storage
-- [ ] 4.2 Email provider interface and Gmail adapter
+- [x] 4.2 Email provider interface and Gmail adapter
 - [ ] 4.3 Idempotent sync job with deduplication by Message-ID
 - [ ] 4.4 Threading, auto-reply and bounce detection
 - [ ] 4.5 Event rules: reopen, resume, follow-up tickets

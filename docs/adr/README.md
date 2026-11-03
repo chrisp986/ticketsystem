@@ -38,3 +38,4 @@ What becomes easier or harder, and what follow-up work it creates.
 ```
 
 | [0012](0012-email-storage.md) | Email storage | Accepted |
+| [0013](0013-email-provider-and-gmail.md) | Email provider interface and Gmail | Accepted |

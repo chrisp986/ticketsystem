@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { parseServerConfig } from './config';
+import { parseGmailConfig, parseServerConfig } from './config';
 
 const validUrl = 'postgresql://user:secret-password@127.0.0.1:5432/ticketsystem';
 
@@ -31,4 +31,32 @@ test('does not include secrets in the error message', () => {
 	expect(() => parseServerConfig({ DATABASE_URL: 'mysql://user:secret-password@host/db' })).toThrow(
 		expect.not.objectContaining({ message: expect.stringContaining('secret-password') })
 	);
+});
+
+describe('parseGmailConfig', () => {
+	const gmail = {
+		GMAIL_CLIENT_ID: 'client-id',
+		GMAIL_CLIENT_SECRET: 'client-secret',
+		GMAIL_REFRESH_TOKEN: 'refresh-token',
+		GMAIL_MAILBOX: 'support@example.com'
+	};
+
+	test('accepts complete settings', () => {
+		expect(parseGmailConfig(gmail)).toEqual(gmail);
+	});
+
+	test('names missing settings without printing the others', () => {
+		const error = (() => {
+			try {
+				parseGmailConfig({ ...gmail, GMAIL_REFRESH_TOKEN: undefined, GMAIL_MAILBOX: 'nope' });
+			} catch (err) {
+				return String(err);
+			}
+		})();
+
+		expect(error).toContain('GMAIL_REFRESH_TOKEN');
+		expect(error).toContain('GMAIL_MAILBOX');
+		expect(error).not.toContain('client-secret');
+		expect(error).not.toContain('nope');
+	});
 });

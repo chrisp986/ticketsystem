@@ -68,8 +68,23 @@ There is no sign-up page. Every account is created with `pnpm user:create`; the 
 | `POSTGRES_PASSWORD`                             | yes      | Password for the development database container              |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PORT` | no       | Overrides for the development database container             |
 | `TEST_DATABASE_URL`                             | no       | Test database URL; the database name must end in `_test`     |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`        | Gmail    | OAuth client of type "Desktop app" (see below)               |
+| `GMAIL_REFRESH_TOKEN`                           | Gmail    | Printed by `pnpm gmail:authorize`; keep it secret            |
+| `GMAIL_MAILBOX`                                 | Gmail    | Address of the support mailbox                               |
 
-The server validates its configuration at startup and names invalid fields without printing their values.
+The server validates its configuration at startup and names invalid fields without printing their values. The Gmail settings are needed only to read email; the web app starts without them.
+
+### Connecting Gmail
+
+The mailbox is read through the Gmail API with read-only access ([ADR 0013](docs/adr/0013-email-provider-and-gmail.md)).
+
+1. In the [Google Cloud console](https://console.cloud.google.com/), create a project and enable the Gmail API.
+2. Configure the OAuth consent screen: user type "External", publishing status "Testing", and add the support mailbox as a test user. A Google Workspace mailbox can use "Internal" instead.
+3. Create an OAuth client ID of type "Desktop app" and put its ID and secret in `.env`, together with `GMAIL_MAILBOX`.
+4. Run `pnpm gmail:authorize`, open the printed address, sign in with the support mailbox and put the printed `GMAIL_REFRESH_TOKEN` in `.env`.
+5. Run `pnpm gmail:check`. It parses the latest inbox messages, saves nothing and prints only counts.
+
+In "Testing" status, Google lets a refresh token expire after about 7 days. Gmail then refuses it, and the error says to run `pnpm gmail:authorize` again. An "Internal" Workspace project does not have this limit.
 
 ## Testing
 
@@ -112,6 +127,8 @@ pnpm validate
 | `pnpm db:test:migrate`  | Apply migrations to the test database        |
 | `pnpm user:create`      | Create a user who can sign in                |
 | `pnpm metrics:report`   | Print the metrics of a period (ADR 0010)     |
+| `pnpm gmail:authorize`  | Sign in to Gmail and print a refresh token   |
+| `pnpm gmail:check`      | Read and parse the latest inbox messages     |
 | `pnpm worker`           | Run background jobs (ADR 0011)               |
 
 ## Running in production mode

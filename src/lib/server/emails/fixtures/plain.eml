@@ -1,0 +1,12 @@
+From: Jo Customer <Jo@Example.com>
+To: Support <support@example.com>, other@example.com
+Cc: Team: a@example.com, b@example.com;
+Subject: Printer broken
+Date: Mon, 02 Nov 2026 09:30:00 +0100
+Message-ID: <plain-1@example.com>
+In-Reply-To: <earlier@example.com>
+References: <first@example.com> <earlier@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+The printer stopped working.
